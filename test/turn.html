@@ -1,0 +1,32 @@
+<!doctype html>
+<html>
+<body>
+<pre id="log"></pre>
+<script>
+const log = s => {
+  console.log(s);
+  document.getElementById('log').textContent += s + '\n';
+};
+
+const pc = new RTCPeerConnection({
+  iceTransportPolicy: 'relay',
+  iceServers: [{
+    urls: 'turn:117.173.67.75:3478?transport=tcp',
+    username: 'BS-WebRTC',
+    credential: 'YRAhGcmerePYuQEsufup3TfUEVNUuwRj'
+  }]
+});
+
+pc.onicecandidate = e => {
+  if (e.candidate) log(e.candidate.candidate);
+  else log('ICE gathering complete');
+};
+
+pc.onicegatheringstatechange = () =>
+  log('ICE gathering state: ' + pc.iceGatheringState);
+
+pc.createDataChannel('x');
+pc.createOffer().then(o => pc.setLocalDescription(o));
+</script>
+</body>
+</html>

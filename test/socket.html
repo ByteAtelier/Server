@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+  <meta charset="UTF-8" />
+  <title>Realtime Frame Viewer (Canvas)</title>
+  <style>
+    body {
+      font-family: monospace;
+      padding: 20px;
+      background: #111;
+      color: #ddd;
+    }
+    canvas {
+      border: 1px solid #444;
+      background: #000;
+      display: block;
+    }
+    .stat {
+      margin-top: 8px;
+    }
+  </style>
+</head>
+<body>
+
+<h2>Realtime Frame Viewer</h2>
+
+<canvas id="canvas" width="640" height="480"></canvas>
+
+<div class="stat">FPS: <span id="fps">0</span></div>
+<div class="stat">Avg Latency (ms): <span id="lat">0</span></div>
+<div class="stat">Last Frame ID: <span id="fid">-</span></div>
+
+<!-- Socket.IO -->
+<script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+<script>
+/*********** 配置 ***********/
+const SOCKET_IO_URL = 'http://106.52.171.112:8800'; // ← 改成你的
+/***************************/
+
+const socket = io(SOCKET_IO_URL, {
+  transports: ['websocket'],
+  upgrade: false
+});
+
+const canvas = document.getElementById('canvas');
+const ctx = canvas.getContext('2d');
+
+const fpsEl = document.getElementById('fps');
+const latEl = document.getElementById('lat');
+const fidEl = document.getElementById('fid');
+
+/*********** 实时缓冲区 ***********/
+let latestFrame = null;      // 只存“最新一帧”
+let decoding = false;
+
+/*********** FPS / 延迟统计 ***********/
+let renderCount = 0;
+let lastStatTime = performance.now();
+let latencies = [];
+
+/*********** Socket 接收 ***********/
+socket.on('connect', () => {
+  console.log('socket connected');
+});
+
+socket.on('frame', (frame) => {
+  // 覆盖旧帧（核心：允许丢帧）
+  latestFrame = frame;
+});
+
+socket.on('disconnect', () => {
+  console.log('socket disconnected');
+});
+
+/*********** 渲染循环 ***********/
+async function renderLoop() {
+  if (latestFrame && !decoding) {
+    const frame = latestFrame;
+    latestFrame = null;     // 立刻清空，避免堆积
+    decoding = true;
+
+    try {
+      const blob = new Blob(
+        [frame.data],
+        { type: frame.codec ? `image/${frame.codec}` : 'image/jpeg' }
+      );
+
+      const bitmap = await createImageBitmap(blob);
+
+      ctx.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+      bitmap.close();
+
+      // ===== 统计 =====
+      renderCount++;
+      fidEl.textContent = frame.frameId ?? '-';
+
+      if (frame.ts_src) {
+        latencies.push(Date.now() - frame.ts_src);
+      }
+
+    } catch (e) {
+      console.warn('frame decode failed', e);
+    } finally {
+      decoding = false;
+    }
+  }
+
+  // ===== FPS / 延迟刷新 =====
+  const now = performance.now();
+  if (now - lastStatTime >= 1000) {
+    fpsEl.textContent = renderCount;
+
+    if (latencies.length) {
+      const avg =
+        latencies.reduce((a, b) => a + b, 0) / latencies.length;
+      latEl.textContent = avg.toFixed(1);
+    }
+
+    renderCount = 0;
+    latencies = [];
+    lastStatTime = now;
+  }
+
+  requestAnimationFrame(renderLoop);
+}
+
+renderLoop();
+</script>
+
+</body>
+</html>
