@@ -1,0 +1,121 @@
+########################
+# Node.js
+########################
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+########################
+# Environment variables
+########################
+.env
+.env.*
+!.env.example
+
+########################
+# Logs
+########################
+logs/
+*.log
+
+########################
+# Build / dist
+########################
+dist/
+build/
+out/
+
+########################
+# OS / Editor
+########################
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+*.swo
+
+########################
+# Expo / React Native
+########################
+.expo/
+.expo-shared/
+web-build/
+android/
+ios/
+
+# Expo local state
+expo-env.d.ts
+
+########################
+# React Native cache
+########################
+.metro-health-check*
+.react-native/
+npm-cache/
+yarn-cache/
+
+########################
+# Python / YOLO
+########################
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+venv/
+.env.venv
+.venv/
+pip-wheel-metadata/
+
+########################
+# Model / Data (非常重要)
+########################
+models/
+weights/
+*.pt
+*.onnx
+*.engine
+
+########################
+# Images / Video (原始数据不进仓库)
+########################
+images/
+videos/
+frames/
+*.jpg
+*.jpeg
+*.png
+*.bmp
+*.webp
+*.mp4
+*.avi
+*.mkv
+
+########################
+# Temporary / Runtime
+########################
+tmp/
+temp/
+cache/
+
+########################
+# Coverage / Test
+########################
+coverage/
+.nyc_output/
+
+########################
+# Certificates / Keys
+########################
+*.pem
+*.key
+*.crt
+
+########################
+# Misc
+########################
+*.bak
+*.old
+*.orig
