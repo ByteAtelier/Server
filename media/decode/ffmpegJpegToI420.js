@@ -24,6 +24,8 @@ class FfmpegJpegToI420 {
   start() {
     if (this._proc) return;
 
+    console.log(`[FfmpegJpegToI420] Starting ffmpeg for ${this.width}x${this.height} I420 decode`);
+
     const args = [
       "-hide_banner",
       "-loglevel",
@@ -179,4 +181,4 @@ class FfmpegJpegToI420 {
   }
 }
 
-module.exports = { FfmpegJpegToI420 };
+module.exports = FfmpegJpegToI420;

@@ -35,11 +35,11 @@
     <div id="fps">FPS: --</div>
     <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
     <script>
-        const socket = io("http://106.52.171.112:8800",
-            {
-                transports: ["websocket"],
-                upgrade: false,
-            });
+        const socket = io("http://106.52.171.112:8800", {
+            transports: ["websocket"],
+            upgrade: false,
+        });
+
         const pc = new RTCPeerConnection({
             iceServers: [{
                 urls: [
@@ -54,6 +54,12 @@
 
         const video = document.getElementById("v");
         const remoteStream = new MediaStream();
+
+        let lastTime = 0;
+        let frames = 0;
+        const fpsEl = document.getElementById("fps");
+        let lastFrameTime = Date.now();
+        let frameDelay = 0;
 
         pc.ontrack = (e) => {
             console.log("[viewer] ontrack", e.track.kind, e.track.readyState, e.streams);
@@ -91,28 +97,37 @@
             }
         }, 1000);
 
+        // Frame processing and FPS calculation
+        function onVideoFrame(now) {
+            const timestamp = Date.now();
+            frames++;
+
+            // Calculate delay in rendering the current frame
+            if (lastFrameTime !== 0) {
+                frameDelay = timestamp - lastFrameTime;
+            }
+
+            if (!lastTime) lastTime = now;
+            const delta = now - lastTime;
+            if (delta >= 1000) {
+                const fps = frames * 1000 / delta;
+                fpsEl.textContent = `FPS: ${fps.toFixed(1)} | Delay: ${frameDelay}ms`;
+                frames = 0;
+                lastTime = now;
+            }
+            lastFrameTime = timestamp;
+
+            video.requestVideoFrameCallback(onVideoFrame);
+        }
+
+        video.requestVideoFrameCallback(onVideoFrame);
+
         (async () => {
             const offer = await pc.createOffer({ offerToReceiveVideo: true, offerToReceiveAudio: false });
             await pc.setLocalDescription(offer);
             socket.emit("webrtc:offer", pc.localDescription);
         })();
-            let lastTime = 0;
-            let frames = 0;
-            const fpsEl = document.getElementById("fps");
-            function onVideoFrame(now) {
-                frames++;
-                if (!lastTime) lastTime = now;
-                const delta = now - lastTime;
-                if (delta >= 1000) {
-                    const fps = frames * 1000 / delta;
-                    fpsEl.textContent = `FPS: ${fps.toFixed(1)}`;
-                    frames = 0;
-                    lastTime = now;
-                }
-                video.requestVideoFrameCallback(onVideoFrame);
-            }
-            video.requestVideoFrameCallback(onVideoFrame);
-        </script>
-    </body>
+    </script>
+</body>
 
 </html>

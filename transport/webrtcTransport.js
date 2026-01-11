@@ -1,47 +1,6 @@
 const wrtc = require("wrtc");
-const jpeg = require("jpeg-js");
 
-/**
- * RGBA -> I420 (YUV420p)
- */
-function rgbaToI420(rgba, width, height) {
-  const frameSize = width * height;
-  const i420 = Buffer.allocUnsafe(frameSize + (frameSize >> 1));
-
-  const yPlane = i420.subarray(0, frameSize);
-  const uPlane = i420.subarray(frameSize, frameSize + (frameSize >> 2));
-  const vPlane = i420.subarray(frameSize + (frameSize >> 2));
-
-  for (let y = 0; y < height; y++) {
-    for (let x = 0; x < width; x++) {
-      const i = (y * width + x) * 4;
-      const r = rgba[i];
-      const g = rgba[i + 1];
-      const b = rgba[i + 2];
-
-      let yy = (0.299 * r + 0.587 * g + 0.114 * b) | 0;
-      if (yy < 0) yy = 0;
-      else if (yy > 255) yy = 255;
-      yPlane[y * width + x] = yy;
-
-      if (x % 2 === 0 && y % 2 === 0) {
-        let uu = (-0.169 * r - 0.331 * g + 0.5 * b + 128) | 0;
-        let vv = (0.5 * r - 0.419 * g - 0.081 * b + 128) | 0;
-        if (uu < 0) uu = 0;
-        else if (uu > 255) uu = 255;
-        if (vv < 0) vv = 0;
-        else if (vv > 255) vv = 255;
-
-        const uvIndex = (y >> 1) * (width >> 1) + (x >> 1);
-        uPlane[uvIndex] = uu;
-        vPlane[uvIndex] = vv;
-      }
-    }
-  }
-  return i420;
-}
-
-module.exports = function setupWebRTCTransport(io, frameChannel, options = {}) {
+module.exports = function setupWebRTCTransport(io, frameChannel, videoWidth, videoHeight, options = {}) {
   const fps = options.fps ?? 30;
   const singleClient = options.singleClient ?? true;
 
@@ -58,7 +17,7 @@ module.exports = function setupWebRTCTransport(io, frameChannel, options = {}) {
   let latestPacket = null;
   frameChannel.on("frame", () => {
     const pkt = frameChannel.getLatest();
-    if (!pkt || pkt.codec !== "jpeg" || !pkt.data) return;
+    if (!pkt || !pkt.data) return;
     latestPacket = pkt;
   });
 
@@ -99,6 +58,7 @@ module.exports = function setupWebRTCTransport(io, frameChannel, options = {}) {
     };
 
     const startPump = () => {
+      console.log("[webrtc] startPump fps=", fps);
       if (pumpTimer) return;
       const intervalMs = Math.floor(1000 / fps);
 
@@ -108,16 +68,14 @@ module.exports = function setupWebRTCTransport(io, frameChannel, options = {}) {
 
         const pkt = latestPacket;
         latestPacket = null;
-
         try {
           // pkt.data: Buffer / Uint8Array
-          const decoded = jpeg.decode(pkt.data, { useTArray: true });
-          const w = decoded.width;
-          const h = decoded.height;
-
-          const i420 = rgbaToI420(decoded.data, w, h);
-
-          videoSource.onFrame({ width: w, height: h, data: i420 });
+          videoSource.onFrame({
+            ts_src: pkt.ts_src,
+            data: pkt.data,
+            width: videoWidth,
+            height: videoHeight,
+          });
         } catch {
           // 解码失败丢帧
         }

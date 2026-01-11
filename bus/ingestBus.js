@@ -11,19 +11,8 @@ class IngestBus extends EventEmitter {
   push(pkt) {
     if (!pkt) return;
 
-    // latest-only：覆盖旧值
-    this._latest = pkt;
-
     // 事件只是“通知有新帧”
     this.emit("frame", pkt);
-  }
-
-  getLatest() {
-    return this._latest;
-  }
-
-  clear() {
-    this._latest = null;
   }
 }
 
