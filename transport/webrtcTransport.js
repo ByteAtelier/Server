@@ -56,7 +56,8 @@ module.exports = function setupWebRTCTransport(io, frameChannel, options = {}) {
 
   // 只保留最新 packet
   let latestPacket = null;
-  frameChannel.on("frame", (pkt) => {
+  frameChannel.on("frame", () => {
+    const pkt = frameChannel.getLatest();
     if (!pkt || pkt.codec !== "jpeg" || !pkt.data) return;
     latestPacket = pkt;
   });

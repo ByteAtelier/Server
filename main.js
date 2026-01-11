@@ -1,14 +1,14 @@
-const frameChannel = require("./channel/frameChannel");
 const { createServer } = require("./server/server");
 const setupWebRTCTransport = require("./transport/webrtcTransport");
 const { createImageLoopSource } = require("./source/imageLoopSource");
+const ingestBus = require("./bus/ingestBus");
 
 function main() {
   // 服务器部分（先创建，拿到 io）
   const { app, httpServer, io } = createServer({ corsOrigin: "*" });
 
   // 传输层部分（挂到 io 上）
-  setupWebRTCTransport(io, frameChannel, {
+  setupWebRTCTransport(io, ingestBus, {
     turn: {
       urls: [
         "turn:39.105.171.44:3478?transport=udp",
@@ -29,7 +29,7 @@ function main() {
     imageDir: "D:\\Code\\BrightSmile\\AI\\datas\\Benchmarking Dataset\\train\\images",
     jpegQuality: 80,
   });
-  source.start(frameChannel);
+  source.start(ingestBus);
 
   // 后续微信 OAuth 路由可以挂这里
   // app.use("/auth/weixin", ...)
