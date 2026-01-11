@@ -35,7 +35,11 @@
     <div id="fps">FPS: --</div>
     <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
     <script>
-        const socket = io("http://106.52.171.112:8800");
+        const socket = io("http://106.52.171.112:8800",
+            {
+                transports: ["websocket"],
+                upgrade: false,
+            });
         const pc = new RTCPeerConnection({
             iceServers: [{
                 urls: [
