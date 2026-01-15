@@ -48,7 +48,9 @@ class FfmpegJpegToI420 {
       "pipe:0",
 
       "-vf",
-      `scale=${this.width}:${this.height},format=yuv420p`,
+      // 临时翻转
+      // `scale=${this.width}:${this.height},format=yuv420p`,
+      `scale=${this.width}:${this.height},rotate=PI,format=yuv420p`,
       "-an",
       "-c:v",
       "rawvideo",

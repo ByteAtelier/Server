@@ -1,6 +1,6 @@
 const { createServer } = require("./server/server");
 const setupWebRTCTransport = require("./transport/webrtcTransport");
-// const { createImageLoopSource } = require("./source/imageLoopSource");
+const { createImageLoopSource } = require("./source/imageLoopSource");
 const { createEsp32UdpSource } = require("./source/esp32UdpSource");
 const MediaProcessor = require("./media/index");
 const ingestBus = require("./bus/ingestBus");
@@ -53,11 +53,8 @@ function main() {
     width: Width,
     height: Height,
     codec: "jpeg",
-    headerBytes: 10,
+    headerBytes: 16,
     udpMaxPayload: 1024,
-    frameTimeoutMs: 1500,
-    maxInFlightFrames: 16,
-    maxFrameBytes: 5 * 1024 * 1024, // 5 MB
   });
   source.start(ingestBus);
 

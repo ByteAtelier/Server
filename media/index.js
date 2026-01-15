@@ -45,6 +45,7 @@ class MediaProcessor {
   // 停止解码器
   stop() {
     if (this.decoder) this.decoder.stop();  // 停止解码器
+    console.log("[MediaProcessor] Stopped");
   }
 }
 
