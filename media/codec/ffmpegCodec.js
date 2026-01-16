@@ -1,13 +1,21 @@
 const { spawn } = require("child_process");
 
-class FfmpegJpegToI420 {
-  constructor({ width, height, onFrame, onLog }) {
+class FfmpegCodec {
+  constructor({ width, height, onFrame, onLog, mode }) {
     this.width = width;
     this.height = height;
     this.onFrame = onFrame;
     this.onLog = onLog || (() => {});
+    if (!["jpegToRgb", "rgbToI420"].includes(mode)) {
+      throw new Error(
+        `[FfmpegCodec] Invalid mode: ${mode}. Supported modes are "jpegToRgb" and "rgbToI420".`
+      );
+    }
+    this.mode = mode;
 
-    this.frameSize = (width * height * 3) >> 1;
+    this.frameSize = this.mode === "jpegToRgb"
+      ? width * height * 3
+      : (width * height * 3) >> 1;
     this._chunks = []; // stdout chunk 队列
     this._chunksBytes = 0; // 队列总字节数
     this._headOffset = 0; // 队首 chunk 已消费偏移
@@ -24,7 +32,16 @@ class FfmpegJpegToI420 {
   start() {
     if (this._proc) return;
 
-    console.log(`[FfmpegJpegToI420] Starting ffmpeg for ${this.width}x${this.height} I420 decode`);
+    this.onLog(`[FfmpegCodec] Starting ffmpeg for ${this.width}x${this.height} with mode=${this.mode}`);
+
+    const isJpegToRgb = this.mode === "jpegToRgb";
+    const inputCodec = isJpegToRgb ? "mjpeg" : "rawvideo";
+    const outputCodec = isJpegToRgb ? "rgb24" : "yuv420p";
+    const format = isJpegToRgb ? "image2pipe" : "rawvideo";
+    const scaleFilter = isJpegToRgb
+      ? `scale=${this.width}:${this.height},format=${outputCodec}`
+      : `scale=${this.width}:${this.height},format=${outputCodec}`;
+    const inputPixFmt = isJpegToRgb ? null : "rgb24";
 
     const args = [
       "-hide_banner",
@@ -41,21 +58,22 @@ class FfmpegJpegToI420 {
       "32",
 
       "-f",
-      "image2pipe",
+      format,
       "-vcodec",
-      "mjpeg",
+      inputCodec,
+      "-s",
+      `${this.width}x${this.height}`,
+      ...(inputPixFmt ? ["-pix_fmt", inputPixFmt] : []),
       "-i",
       "pipe:0",
 
       "-vf",
-      // 临时翻转
-      // `scale=${this.width}:${this.height},format=yuv420p`,
-      `scale=${this.width}:${this.height},rotate=PI,format=yuv420p`,
+      scaleFilter,
       "-an",
       "-c:v",
       "rawvideo",
       "-pix_fmt",
-      "yuv420p",
+      outputCodec,
       "-f",
       "rawvideo",
       "pipe:1",
@@ -63,15 +81,17 @@ class FfmpegJpegToI420 {
 
     this._proc = spawn("ffmpeg", args, { stdio: ["pipe", "pipe", "pipe"] });
 
+    this.onLog(`[FfmpegCodec] ffmpeg started with PID=${this._proc.pid} mode=${this.mode} args=${args.join(" ")}`);
+
     this._proc.stdout.on("data", (chunk) => this._handleStdout(chunk));
-    this._proc.stderr.on("data", (d) => this.onLog(d.toString()));
+    this._proc.stderr.on("data", (d) => this.onLog(`[FfmpegCodec] ffmpeg mode=${this.mode} stderr: ${d.toString()}`));
 
     this._proc.stdin.on("drain", () => {
       this._stdinBusy = false;
     });
 
     this._proc.on("close", (code, signal) => {
-      this.onLog(`ffmpeg exited code=${code} signal=${signal}`);
+      this.onLog(`[FfmpegCodec] ffmpeg exited code=${code} signal=${signal} mode=${this.mode}`);
       this._proc = null;
       this._resetParser();
       if (!this._closed) this.start();
@@ -92,6 +112,7 @@ class FfmpegJpegToI420 {
     this._chunks = [];
     this._chunksBytes = 0;
     this._headOffset = 0;
+    this.onLog("[FfmpegCodec] Stopped");
   }
 
   _resetParser() {
@@ -100,10 +121,10 @@ class FfmpegJpegToI420 {
     this._headOffset = 0;
   }
 
-  pushJpeg(jpegBuf) {
+  pushFrame(frameBuf) {
     if (!this._proc) return;
     if (this._stdinBusy) return; // latest-frame-wins：直接丢
-    const buf = Buffer.isBuffer(jpegBuf) ? jpegBuf : Buffer.from(jpegBuf);
+    const buf = Buffer.isBuffer(frameBuf) ? frameBuf : Buffer.from(frameBuf);
     const ok = this._proc.stdin.write(buf);
     if (!ok) {
       // stdin 写满，进入 busy，后续帧全部丢
@@ -183,4 +204,4 @@ class FfmpegJpegToI420 {
   }
 }
 
-module.exports = FfmpegJpegToI420;
+module.exports = FfmpegCodec;

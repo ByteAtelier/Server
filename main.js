@@ -38,25 +38,25 @@ function main() {
   mediaProcessor.start();
 
   // 帧源部分（最后启动）
-  // const source = createImageLoopSource({
-  //   fps: 30,
-  //   width: Width,
-  //   height: Height,
-  //   imageDir: "D:\\Code\\BrightSmile\\AI\\datas\\Benchmarking Dataset\\train\\images",
-  //   jpegQuality: 80,
-  // });
-  // source.start(ingestBus);
-
-  const source = createEsp32UdpSource({
-    host: "0.0.0.0",
-    port: 5000,
+  const source = createImageLoopSource({
+    fps: 30,
     width: Width,
     height: Height,
-    codec: "jpeg",
-    headerBytes: 16,
-    udpMaxPayload: 1024,
+    imageDir: "D:\\Code\\BrightSmile\\AI\\datas\\Benchmarking Dataset\\train\\images",
+    jpegQuality: 80,
   });
   source.start(ingestBus);
+
+  // const source = createEsp32UdpSource({
+  //   host: "0.0.0.0",
+  //   port: 5000,
+  //   width: Width,
+  //   height: Height,
+  //   codec: "jpeg",
+  //   headerBytes: 16,
+  //   udpMaxPayload: 1024,
+  // });
+  // source.start(ingestBus);
 
   // 后续微信 OAuth 路由可以挂这里
   // app.use("/auth/weixin", ...)
