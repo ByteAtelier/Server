@@ -66,7 +66,7 @@ function main() {
     console.log(`[Server] Server listening on ${port}`);
   });
 
-  // 可选但建议：优雅退出，避免残留定时器/句柄
+  // 优雅退出，避免残留定时器/句柄
   process.on("SIGINT", () => {
     try { source.stop?.(); } catch {}
     try { httpServer.close(); } catch {}
