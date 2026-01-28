@@ -1,50 +1,48 @@
 # ByteAtelier Server
 
-Node.js server for ingesting image frames and streaming them to WebRTC clients over Socket.IO.
-It includes two frame sources (image loop and ESP32 UDP) and a media processing pipeline that
-broadcasts frames to connected clients.
+基于 Node.js 的服务器，用于采集图像帧并通过 Socket.IO + WebRTC 推流给客户端。
+项目包含两种帧源（图片轮播与 ESP32 UDP）以及媒体处理流程。
 
-## Requirements
+## 环境要求
 
-- Node.js and npm
-- Native build tooling for dependencies such as `sharp`
+- Node.js 与 npm
 
-## Quick start
+## 快速开始
 
 ```bash
 npm install
 node main.js
 ```
 
-The server listens on `http://localhost:3000` by default. Set `PORT` to change the port:
+默认监听 `http://localhost:3000`，可通过 `PORT` 指定端口：
 
 ```bash
 PORT=4000 node main.js
 ```
 
-## Configuration
+## 配置说明
 
-All runtime configuration is currently in `main.js`:
+运行时配置集中在 `main.js`：
 
-- **Frame source**
-  - `createImageLoopSource`: loops through images from `imageDir` and resizes them to the
-    configured width/height. Update `imageDir`, `fps`, `width`, and `height` as needed.
-  - `createEsp32UdpSource`: enable the ESP32 UDP source by uncommenting its block and
-    configuring `host`, `port`, and frame metadata.
-- **WebRTC transport**
-  - Update the TURN server settings in the `setupWebRTCTransport` call.
+- **帧源**
+  - `createImageLoopSource`：从 `imageDir` 轮播图片并缩放到指定尺寸，按需修改
+    `imageDir`、`fps`、`width`、`height`。
+  - `createEsp32UdpSource`：启用 ESP32 UDP 帧源时取消注释，并配置 `host`、`port`
+    以及帧元数据。
+- **WebRTC 传输**
+  - 在 `setupWebRTCTransport` 中更新 TURN 服务器配置。
 
-## Project layout
+## 目录结构
 
-- `main.js` – application entry point
-- `bus/` – ingest/video event channels
-- `server/` – Express + Socket.IO server setup
-- `source/` – frame sources (image loop, ESP32 UDP)
-- `transport/` – WebRTC transport
-- `media/` – media processing pipeline
-- `test/` – HTML pages for manual testing
+- `main.js` – 程序入口
+- `bus/` – 采集/视频事件通道
+- `server/` – Express + Socket.IO 服务
+- `source/` – 帧源（图片轮播、ESP32 UDP）
+- `transport/` – WebRTC 传输层
+- `media/` – 媒体处理流程
+- `test/` – 手动测试页面
 
-## Manual testing
+## 手动测试
 
-Open the HTML files in `test/` (for example, `test/webrtc.html`) in a browser while the server
-is running to verify video streaming.
+启动服务后，可在浏览器中打开 `test/` 下的 HTML 文件（例如 `test/webrtc.html`）
+以验证视频流输出。
