@@ -37,6 +37,7 @@ All runtime configuration is currently in `main.js`:
 ## Project layout
 
 - `main.js` – application entry point
+- `bus/` – ingest/video event channels
 - `server/` – Express + Socket.IO server setup
 - `source/` – frame sources (image loop, ESP32 UDP)
 - `transport/` – WebRTC transport
