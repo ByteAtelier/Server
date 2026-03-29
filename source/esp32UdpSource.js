@@ -11,10 +11,16 @@ function createEsp32UdpSource(defaultOpts = {}) {
 
     headerBytes: defaultOpts.headerBytes ?? 16,
     udpMaxPayload: defaultOpts.udpMaxPayload ?? 1024,
+    logEveryMs: defaultOpts.logEveryMs ?? 1000,
   };
 
   let socket = null;
   let running = false;
+
+  // 收帧日志做限频，避免高帧率刷屏
+  let recvStatWindowStart = 0;
+  let recvStatCount = 0;
+  let lastInlineLen = 0;
 
   // 最多两帧
   let cur = null;   // 最新帧
@@ -50,6 +56,25 @@ function createEsp32UdpSource(defaultOpts = {}) {
       height: opts.height,
       data: buf,
     });
+
+    const now = Date.now();
+    if (recvStatWindowStart === 0) recvStatWindowStart = now;
+    recvStatCount++;
+
+    if (recvStatCount > 0 && now - recvStatWindowStart >= opts.logEveryMs) {
+      const sec = (now - recvStatWindowStart) / 1000;
+      const fps = sec > 0 ? (recvStatCount / sec).toFixed(1) : "0.0";
+      const line = `[esp32UdpSource] recv frame id=${frame.id}, size=${buf.length}B, window=${recvStatCount} frames/${sec.toFixed(1)}s (~${fps} FPS)`;
+      if (process.stdout.isTTY) {
+        const pad = Math.max(0, lastInlineLen - line.length);
+        process.stdout.write(`\r${line}${" ".repeat(pad)}`);
+        lastInlineLen = line.length;
+      } else {
+        console.log(line);
+      }
+      recvStatWindowStart = now;
+      recvStatCount = 0;
+    }
   }
 
   function acceptPacket(frameChannel, msg) {
@@ -153,6 +178,13 @@ function createEsp32UdpSource(defaultOpts = {}) {
 
     cur = null;
     prev = null;
+    recvStatWindowStart = 0;
+    recvStatCount = 0;
+
+    if (process.stdout.isTTY && lastInlineLen > 0) {
+      process.stdout.write("\r\n");
+      lastInlineLen = 0;
+    }
 
     if (socket) {
       try {
