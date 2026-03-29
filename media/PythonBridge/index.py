@@ -67,7 +67,7 @@ def main():
         max_det=args.max_det,
         mask_alpha=args.mask_alpha,
     )
-    log(f"READY w={W} h={H} payload={PAYLOAD_LEN} hdr={HDR_SIZE} fmt={HDR_FMT}")
+    log(f"\nREADY w={W} h={H} payload={PAYLOAD_LEN} hdr={HDR_SIZE} fmt={HDR_FMT}")
     log(
         f"YOLO model={args.model} imgsz={args.imgsz} conf={args.conf} "
         f"iou={args.iou} max_det={args.max_det} device={yolo.device}"

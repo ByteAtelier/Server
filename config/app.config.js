@@ -33,7 +33,7 @@ const APP_CONFIG = {
   },
   source: {
     // 可选: "imageLoop" | "esp32Udp"
-    type: "imageLoop",
+    type: "esp32Udp",
     imageLoop: {
       fps: 30,
       imageDir: "D:\\Code\\BrightSmile\\AI\\datas\\Benchmarking Dataset\\train\\images",

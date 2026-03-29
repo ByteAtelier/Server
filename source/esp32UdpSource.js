@@ -17,10 +17,13 @@ function createEsp32UdpSource(defaultOpts = {}) {
   let socket = null;
   let running = false;
 
-  // 收帧日志做限频，避免高帧率刷屏
-  let recvStatWindowStart = 0;
+  // 单行状态栏统计窗口（仅有活动时输出）
+  let statWindowStart = 0;
   let recvStatCount = 0;
+  let lastFrameId = -1;
   let lastInlineLen = 0;
+  let dropStatCount = 0;
+  let dropReasons = Object.create(null);
 
   function writeStatusLine(line) {
     if (process.stdout.isTTY) {
@@ -32,17 +35,50 @@ function createEsp32UdpSource(defaultOpts = {}) {
     console.log(line);
   }
 
-  function writeEventLine(line) {
-    if (process.stdout.isTTY) {
-      if (lastInlineLen > 0) {
-        // 先结束行内状态，再打印事件日志，避免被下一次 \r 覆盖
-        process.stdout.write("\n");
-        lastInlineLen = 0;
-      }
-      process.stdout.write(`${line}\n`);
+  function topDropReasons(maxItems = 2) {
+    return Object.entries(dropReasons)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, maxItems)
+      .map(([k, v]) => `${k}:${v}`)
+      .join("|");
+  }
+
+  function flushStatus(now, force = false) {
+    if (statWindowStart === 0) statWindowStart = now;
+    if (!force && now - statWindowStart < opts.logEveryMs) return;
+
+    const active = recvStatCount > 0 || dropStatCount > 0;
+    if (!active) {
+      statWindowStart = now;
       return;
     }
-    console.log(line);
+
+    const sec = (now - statWindowStart) / 1000;
+    const fps = sec > 0 ? recvStatCount / sec : 0;
+    const totalEvents = recvStatCount + dropStatCount;
+    const dropPct = totalEvents > 0 ? (dropStatCount * 100) / totalEvents : 0;
+    const reasonSummary = dropStatCount > 0 ? topDropReasons(2) : "-";
+    const idText = lastFrameId >= 0 ? String(lastFrameId) : "-";
+    const recvText = String(recvStatCount);
+    const fpsText = fps.toFixed(1);
+    const dropPctText = dropPct.toFixed(1);
+
+    writeStatusLine(
+      `[esp32UdpSource] id=${idText} recv=${recvText} fps=${fpsText} drop=${dropStatCount} drop%=${dropPctText} top=${reasonSummary}`
+    );
+
+    statWindowStart = now;
+    recvStatCount = 0;
+    dropStatCount = 0;
+    dropReasons = Object.create(null);
+  }
+
+  function recordDrop(reason) {
+    const now = Date.now();
+    if (statWindowStart === 0) statWindowStart = now;
+    dropStatCount++;
+    dropReasons[reason] = (dropReasons[reason] || 0) + 1;
+    flushStatus(now, false);
   }
 
   // 最多两帧
@@ -62,28 +98,10 @@ function createEsp32UdpSource(defaultOpts = {}) {
     };
   }
 
-  function summarizeMissingParts(frame, maxItems = 12) {
-    const missing = [];
-    for (let i = 0; i < frame.total; i++) {
-      if (frame.parts[i] === null) missing.push(i);
-    }
-    return {
-      count: missing.length,
-      preview: missing.slice(0, maxItems),
-      truncated: missing.length > maxItems,
-    };
-  }
-
   function dropFrame(frame, reason = "unknown") {
     if (!frame) return;
 
-    if (!frame.completed && frame.received < frame.total) {
-      const miss = summarizeMissingParts(frame);
-      const suffix = miss.truncated ? "..." : "";
-      writeEventLine(
-        `[esp32UdpSource] packet loss: drop frame id=${frame.id}, reason=${reason}, recv=${frame.received}/${frame.total}, missing=${miss.count}, missingIndex=[${miss.preview.join(",")}${suffix}]`
-      );
-    }
+    recordDrop(`frame:${reason}`);
 
     frame.completed = true;
   }
@@ -102,21 +120,18 @@ function createEsp32UdpSource(defaultOpts = {}) {
     });
 
     const now = Date.now();
-    if (recvStatWindowStart === 0) recvStatWindowStart = now;
+    if (statWindowStart === 0) statWindowStart = now;
     recvStatCount++;
+    lastFrameId = frame.id;
 
-    if (recvStatCount > 0 && now - recvStatWindowStart >= opts.logEveryMs) {
-      const sec = (now - recvStatWindowStart) / 1000;
-      const fps = sec > 0 ? (recvStatCount / sec).toFixed(1) : "0.0";
-      const line = `[esp32UdpSource] recv frame id=${frame.id}, size=${buf.length}B, window=${recvStatCount} frames/${sec.toFixed(1)}s (~${fps} FPS)`;
-      writeStatusLine(line);
-      recvStatWindowStart = now;
-      recvStatCount = 0;
-    }
+    flushStatus(now, false);
   }
 
   function acceptPacket(frameChannel, msg) {
-    if (msg.length < opts.headerBytes) return;
+    if (msg.length < opts.headerBytes) {
+      recordDrop("pkt:short_header");
+      return;
+    }
 
     const ts_src = msg.readUInt32LE(0);
     const id = msg.readUInt32LE(4);
@@ -126,11 +141,23 @@ function createEsp32UdpSource(defaultOpts = {}) {
     const _ = msg.readUInt16LE(14); // 内存对齐
 
     // ========== 基本校验 ==========    
-    if (total === 0) return;
-    if (index >= total) return;
-    if (dataLen > opts.udpMaxPayload) return;
+    if (total === 0) {
+      recordDrop("pkt:total_zero");
+      return;
+    }
+    if (index >= total) {
+      recordDrop("pkt:index_out_of_range");
+      return;
+    }
+    if (dataLen > opts.udpMaxPayload) {
+      recordDrop("pkt:dataLen_exceed_udpMaxPayload");
+      return;
+    }
     const available = msg.length - opts.headerBytes;
-    if (dataLen > available) return;
+    if (dataLen > available) {
+      recordDrop("pkt:dataLen_exceed_available");
+      return;
+    }
 
     const payload = msg.subarray(
       opts.headerBytes,
@@ -153,18 +180,25 @@ function createEsp32UdpSource(defaultOpts = {}) {
       frame = cur;
     } else {
       // 更旧的帧，直接丢弃
+      recordDrop("pkt:older_than_current");
       return;
     }
 
     // ========== 早期裁决 ==========
-    if (frame.completed) return;
+    if (frame.completed) {
+      recordDrop("pkt:on_completed_frame");
+      return;
+    }
     if (frame.total !== total) {
       dropFrame(frame, "inconsistent_total");
       return;
     }
 
     // ========== 去重 & 组包 ==========
-    if (frame.parts[index] !== null) return;
+    if (frame.parts[index] !== null) {
+      recordDrop("pkt:duplicate_index");
+      return;
+    }
 
     frame.parts[index] = payload;
     frame.received++;
@@ -216,8 +250,12 @@ function createEsp32UdpSource(defaultOpts = {}) {
 
     cur = null;
     prev = null;
-    recvStatWindowStart = 0;
+    flushStatus(Date.now(), true);
+    statWindowStart = 0;
     recvStatCount = 0;
+    lastFrameId = -1;
+    dropStatCount = 0;
+    dropReasons = Object.create(null);
 
     if (process.stdout.isTTY && lastInlineLen > 0) {
       process.stdout.write("\r\n");
