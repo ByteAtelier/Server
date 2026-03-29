@@ -20,7 +20,7 @@ class MediaProcessor {
       height: this.height, // 从构造函数接收高度
       onFrame: this.handleDecodedFrame.bind(this), // 解码后帧的处理函数
       onLog: console.log, // 可选：输出解码日志
-      mode: "jpegToRgb", // 设置解码模式为 JPEG 到 I420
+      mode: "jpegToBgr", // 设置解码模式为 JPEG 到 BGR
     });
 
     // 初始化编码器
@@ -29,7 +29,7 @@ class MediaProcessor {
       height: this.height,
       onFrame: this.handleEncodedFrame.bind(this),
       onLog: console.log,
-      mode: "rgbToI420",
+      mode: "bgrToI420",
     });
 
     // 启动解码器
@@ -53,14 +53,14 @@ class MediaProcessor {
     });
   }
 
-  // 处理解码后的 RGB 数据
-  handleDecodedFrame(rgbFrame) {
+  // 处理解码后的 BGR 数据
+  handleDecodedFrame(bgrFrame) {
     // Python 是节拍：上游 > Python 时会在 PythonBridge 内部覆盖 mailbox 丢上游帧（不积压）
     // 注意：PythonBridge 约定字段名为 { frameId, tsMs, frameBuf }
     this.pythonBridge.pushFrame({
       frameId: this.frameId++, // u32 递增帧号
       tsMs: this.timestamp, // 毫秒时间戳（来自 ingest 的 pkt.ts_src）
-      frameBuf: rgbFrame, // RGB24 = w*h*3
+      frameBuf: bgrFrame, // BGR24 = w*h*3
     });
   }
 
@@ -68,7 +68,7 @@ class MediaProcessor {
   handlePythonFrame({ frameId, tsMs, frameBuf }) {
     // 以 Python 输出为准：后续编码与发送使用这帧对应的时间戳
     this.timestamp = typeof tsMs === "bigint" ? Number(tsMs) : tsMs;
-    // 将 Python 处理后的 RGB 帧送入编码器（RGB -> I420）
+    // 将 Python 处理后的 BGR 帧送入编码器（BGR -> I420）
     this.encoder.pushFrame(frameBuf);
   }
   

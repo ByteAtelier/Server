@@ -7,7 +7,7 @@
 // 0..3   frameId  u32 LE
 // 4..11  tsMs     u64 LE（毫秒）
 //
-// Payload：固定长度 RGB24 = width * height * 3
+// Payload：固定长度 BGR24 = width * height * 3
 //
 // 项目风格：
 // - 不做 >>>0 / &0xffff 这类“修正型转换”
@@ -18,7 +18,7 @@ const { spawn } = require("child_process");
 const path = require("path");
 
 const HEADER_SIZE = 12;
-const CHANNELS_RGB = 3;
+const CHANNELS_BGR = 3;
 
 class PythonBridge {
   constructor(opts = {}) {
@@ -33,10 +33,10 @@ class PythonBridge {
 
     this.onLog = typeof opts.onLog === "function" ? opts.onLog : () => {};
 
-    // onFrame：Python 输出的“处理后完整图像（RGB24）”唯一出口，下游（编码/传输）从这里取帧
+    // onFrame：Python 输出的“处理后完整图像（BGR24）”唯一出口，下游（编码/传输）从这里取帧
     this.onFrame = typeof opts.onFrame === "function" ? opts.onFrame : () => {};
 
-    this._payloadLen = this.width * this.height * CHANNELS_RGB;
+    this._payloadLen = this.width * this.height * CHANNELS_BGR;
 
     this._proc = null;
     this._alive = false;
@@ -128,7 +128,7 @@ class PythonBridge {
   }
 
   /**
-   * pushFrame：推入一帧 RGB24
+  * pushFrame：推入一帧 BGR24
    * - 上游>Python：覆盖 mailbox（丢上游帧），不排队、不积压
    * - Python 为节拍：严格 1 in-flight
    *

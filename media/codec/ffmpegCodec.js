@@ -6,14 +6,14 @@ class FfmpegCodec {
     this.height = height;
     this.onFrame = onFrame;
     this.onLog = onLog || (() => {});
-    if (!["jpegToRgb", "rgbToI420"].includes(mode)) {
+    if (!["jpegToBgr", "bgrToI420"].includes(mode)) {
       throw new Error(
-        `[FfmpegCodec] Invalid mode: ${mode}. Supported modes are "jpegToRgb" and "rgbToI420".`
+        `[FfmpegCodec] Invalid mode: ${mode}. Supported modes are "jpegToBgr" and "bgrToI420".`
       );
     }
     this.mode = mode;
 
-    this.frameSize = this.mode === "jpegToRgb"
+    this.frameSize = this.mode === "jpegToBgr"
       ? width * height * 3
       : (width * height * 3) >> 1;
     this._chunks = []; // stdout chunk 队列
@@ -34,14 +34,14 @@ class FfmpegCodec {
 
     this.onLog(`[FfmpegCodec] Starting ffmpeg for ${this.width}x${this.height} with mode=${this.mode}`);
 
-    const isJpegToRgb = this.mode === "jpegToRgb";
-    const inputCodec = isJpegToRgb ? "mjpeg" : "rawvideo";
-    const outputCodec = isJpegToRgb ? "rgb24" : "yuv420p";
-    const format = isJpegToRgb ? "image2pipe" : "rawvideo";
-    const scaleFilter = isJpegToRgb
+    const isJpegToBgr = this.mode === "jpegToBgr";
+    const inputCodec = isJpegToBgr ? "mjpeg" : "rawvideo";
+    const outputCodec = isJpegToBgr ? "bgr24" : "yuv420p";
+    const format = isJpegToBgr ? "image2pipe" : "rawvideo";
+    const scaleFilter = isJpegToBgr
       ? `scale=${this.width}:${this.height},format=${outputCodec}`
       : `scale=${this.width}:${this.height},format=${outputCodec}`;
-    const inputPixFmt = isJpegToRgb ? null : "rgb24";
+    const inputPixFmt = isJpegToBgr ? null : "bgr24";
 
     const args = [
       "-hide_banner",

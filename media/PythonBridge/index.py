@@ -1,7 +1,7 @@
 # index.py（协议配套骨架，Header v2：12B）
 # 0..3   frameId  u32 LE
 # 4..11  tsMs     u64 LE
-# payload: 固定 RGB24 = W*H*3
+# payload: 固定 BGR24 = W*H*3
 #
 # 说明：
 # - 这里仅提供“读一帧 -> 原样写回一帧”的最小骨架，便于你在此处编排门控/YOLO/图像处理。
@@ -55,7 +55,7 @@ def main():
         frame_id, ts_ms = struct.unpack(HDR_FMT, hdr)
         payload = read_exact(PAYLOAD_LEN)
 
-        # TODO: 在这里做你的门控/拦截/图像处理（输入 payload，输出 out_payload）
+        # TODO: 在这里做你的门控/拦截/图像处理（输入 BGR payload，输出 BGR out_payload）
         out_payload = payload
 
         out_hdr = struct.pack(HDR_FMT, frame_id, ts_ms)
