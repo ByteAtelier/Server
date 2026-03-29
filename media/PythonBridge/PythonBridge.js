@@ -95,7 +95,7 @@ class PythonBridge {
 
     p.stderr.on("data", (chunk) => {
       const s = chunk.toString("utf8").trimEnd();
-      if (s) this.onLog(`[python] ${s}`);
+      if (s) this.onLog(`\n[python] ${s}`);
     });
 
     p.stdin.on("drain", () => {

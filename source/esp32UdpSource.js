@@ -100,6 +100,7 @@ function createEsp32UdpSource(defaultOpts = {}) {
 
   function dropFrame(frame, reason = "unknown") {
     if (!frame) return;
+    if (frame.completed) return;
 
     recordDrop(`frame:${reason}`);
 

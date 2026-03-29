@@ -10,5 +10,5 @@ def log(msg: str) -> None:
     except Exception:
         prefix = "[<?>:0] "
 
-    sys.stderr.write(prefix + msg + "\n")
+    sys.stderr.write(f"{prefix}{msg}\n")
     sys.stderr.flush()

@@ -84,7 +84,7 @@ class FfmpegCodec {
     this.onLog(`[FfmpegCodec] ffmpeg started with PID=${this._proc.pid} mode=${this.mode} args=${args.join(" ")}`);
 
     this._proc.stdout.on("data", (chunk) => this._handleStdout(chunk));
-    this._proc.stderr.on("data", (d) => this.onLog(`[FfmpegCodec] ffmpeg mode=${this.mode} stderr: ${d.toString()}`));
+    this._proc.stderr.on("data", (d) => this.onLog(`\n[FfmpegCodec] ffmpeg mode=${this.mode} stderr: ${d.toString()}`));
 
     this._proc.stdin.on("drain", () => {
       this._stdinBusy = false;
