@@ -30,6 +30,7 @@ class PythonBridge {
 
     // Python 核心调度入口：默认同目录 index.py
     this.scriptPath = opts.scriptPath || path.join(__dirname, "index.py");
+    this.scriptArgs = opts.scriptArgs || {};
 
     this.onLog = typeof opts.onLog === "function" ? opts.onLog : () => {};
 
@@ -66,14 +67,14 @@ class PythonBridge {
   start() {
     if (this._proc) return;
 
-    const args = ["-u", this.scriptPath, "--w", String(this.width), "--h", String(this.height)];
+    const args = ["-u", this.scriptPath, "--w", String(this.width), "--h", String(this.height), ...this._buildScriptArgs()];
     const p = spawn(this.pythonBin, args, { stdio: ["pipe", "pipe", "pipe"] });
 
     this._proc = p;
     this._alive = true;
 
     this.onLog(
-      `[PythonBridge] start pythonBin=${this.pythonBin} scriptPath=${this.scriptPath} w=${this.width} h=${this.height}`
+      `[PythonBridge] start pythonBin=${this.pythonBin} scriptPath=${this.scriptPath} w=${this.width} h=${this.height} args=${JSON.stringify(this.scriptArgs)}`
     );
 
     p.on("error", (err) => {
@@ -103,6 +104,20 @@ class PythonBridge {
     });
 
     this._trySendNext();
+  }
+
+  _buildScriptArgs() {
+    const cli = [];
+    for (const [k, v] of Object.entries(this.scriptArgs)) {
+      if (v === undefined || v === null) continue;
+      const key = `--${String(k)}`;
+      if (typeof v === "boolean") {
+        if (v) cli.push(key);
+        continue;
+      }
+      cli.push(key, String(v));
+    }
+    return cli;
   }
 
   stop() {

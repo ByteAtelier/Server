@@ -3,12 +3,13 @@ const PythonBridge = require("./PythonBridge/PythonBridge");
 
 class MediaProcessor {
   // 通过构造器传入所有的参数：fps、width、height，ingestBus 和 videoBus
-  constructor({ fps, width, height, ingestBus, videoBus }) {
+  constructor({ fps, width, height, ingestBus, videoBus, pythonBridge = {} }) {
     this.fps = fps || 30; // 帧率，默认为 30
     this.width = width || 640; // 视频宽度，默认 640
     this.height = height || 480; // 视频高度，默认 480
     this.ingestBus = ingestBus; // 接收数据的总线
     this.videoBus = videoBus; // 视频总线，用于推送解码后的帧
+    this.pythonBridgeConfig = pythonBridge;
     this.timestamp = 0;
     this.frameId = 0; // 用于标记帧的递增 ID
   }
@@ -38,6 +39,7 @@ class MediaProcessor {
     this.encoder.start();
 
     this.pythonBridge = new PythonBridge({
+      ...this.pythonBridgeConfig,
       width: this.width,
       height: this.height,
       onLog: console.log,

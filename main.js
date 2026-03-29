@@ -5,58 +5,46 @@ const { createEsp32UdpSource } = require("./source/esp32UdpSource");
 const MediaProcessor = require("./media/index");
 const ingestBus = require("./bus/ingestBus");
 const videoBus = require("./bus/videoBus");
-
-const Width = 640;
-const Height = 480;
+const APP_CONFIG = require("./config/app.config");
 
 function main() {
+  const width = APP_CONFIG.media.width;
+  const height = APP_CONFIG.media.height;
+
   // 服务器部分（先创建，拿到 io）
   const { app, httpServer, io } = createServer({ corsOrigin: "*" });
 
   // 传输层部分（挂到 io 上）
-  setupWebRTCTransport(io, videoBus, Width, Height, {
-    turn: {
-      urls: [
-        "turn:39.105.171.44:3478?transport=udp",
-        "turn:39.105.171.44:3478?transport=tcp",
-      ],
-      username: "BS-coturn",
-      credential: "DnDzRttdGVB25MntSpAEUDxrxvkwBjP8",
-    },
-    fps: 30,
-    singleClient: true,
-  });
+  setupWebRTCTransport(io, videoBus, width, height, APP_CONFIG.webrtc);
 
   // 创建 media 处理器并启动
   const mediaProcessor = new MediaProcessor({ // 新增：实例化并启动 MediaProcessor
-    fps: 30,
-    width: Width,
-    height: Height,
+    fps: APP_CONFIG.media.fps,
+    width,
+    height,
     ingestBus,
-    videoBus
+    videoBus,
+    pythonBridge: APP_CONFIG.media.pythonBridge,
   }); // 新增：实例化并启动 MediaProcessor
   mediaProcessor.start();
 
   // 帧源部分（最后启动）
-  // const source = createImageLoopSource({
-  //   fps: 30,
-  //   width: Width,
-  //   height: Height,
-  //   imageDir: "D:\\Code\\BrightSmile\\AI\\datas\\Benchmarking Dataset\\train\\images",
-  //   jpegQuality: 80,
-  // });
-  // source.start(ingestBus);
-
-  const source = createEsp32UdpSource({
-    host: "0.0.0.0",
-    port: 5000,
-    width: Width,
-    height: Height,
-    codec: "jpeg",
-    headerBytes: 16,
-    udpMaxPayload: 1024,
-    logEveryMs: 1000,
-  });
+  let source;
+  if (APP_CONFIG.source.type === "imageLoop") {
+    source = createImageLoopSource({
+      ...APP_CONFIG.source.imageLoop,
+      width,
+      height,
+    });
+  } else if (APP_CONFIG.source.type === "esp32Udp") {
+    source = createEsp32UdpSource({
+      ...APP_CONFIG.source.esp32Udp,
+      width,
+      height,
+    });
+  } else {
+    throw new Error(`[main] unsupported APP_CONFIG.source.type=${APP_CONFIG.source.type}`);
+  }
   source.start(ingestBus);
 
   // 后续微信 OAuth 路由可以挂这里

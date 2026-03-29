@@ -10,8 +10,11 @@
 import sys
 import struct
 import argparse
+import os
+import numpy as np
 
 from utils.utils import log
+from yoloSeg import YoloSegEngine
 
 W = 640 # 默认宽度 后被覆盖
 H = 480 # 默认高度 后被覆盖
@@ -42,21 +45,42 @@ def parse_args():
     p = argparse.ArgumentParser()
     p.add_argument("--w", type=int, required=True)
     p.add_argument("--h", type=int, required=True)
+    p.add_argument("--model", type=str, default=os.path.join(os.path.dirname(__file__), "weights", "tooth_seg_n_640.pt"))
+    p.add_argument("--imgsz", type=int, default=640)
+    p.add_argument("--conf", type=float, default=0.25)
+    p.add_argument("--iou", type=float, default=0.45)
+    p.add_argument("--max-det", type=int, default=100)
+    p.add_argument("--device", type=str, default=None)
+    p.add_argument("--mask-alpha", type=float, default=0.45)
     return p.parse_args()
 
 def main():
     args = parse_args()
     W, H = args.w, args.h
     PAYLOAD_LEN = W * H * 3
+    yolo = YoloSegEngine(
+        model_path=args.model,
+        input_size=args.imgsz,
+        conf=args.conf,
+        iou=args.iou,
+        device=args.device,
+        max_det=args.max_det,
+        mask_alpha=args.mask_alpha,
+    )
     log(f"READY w={W} h={H} payload={PAYLOAD_LEN} hdr={HDR_SIZE} fmt={HDR_FMT}")
+    log(
+        f"YOLO model={args.model} imgsz={args.imgsz} conf={args.conf} "
+        f"iou={args.iou} max_det={args.max_det} device={yolo.device}"
+    )
 
     while True:
         hdr = read_exact(HDR_SIZE)
         frame_id, ts_ms = struct.unpack(HDR_FMT, hdr)
         payload = read_exact(PAYLOAD_LEN)
 
-        # TODO: 在这里做你的门控/拦截/图像处理（输入 BGR payload，输出 BGR out_payload）
-        out_payload = payload
+        frame_bgr = np.frombuffer(payload, dtype=np.uint8).reshape(H, W, 3)
+        out_bgr = yolo.infer_bgr(frame_bgr)
+        out_payload = out_bgr.tobytes()
 
         out_hdr = struct.pack(HDR_FMT, frame_id, ts_ms)
         write_all(out_hdr + out_payload)
