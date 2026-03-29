@@ -22,6 +22,29 @@ function createEsp32UdpSource(defaultOpts = {}) {
   let recvStatCount = 0;
   let lastInlineLen = 0;
 
+  function writeStatusLine(line) {
+    if (process.stdout.isTTY) {
+      const pad = Math.max(0, lastInlineLen - line.length);
+      process.stdout.write(`\r${line}${" ".repeat(pad)}`);
+      lastInlineLen = line.length;
+      return;
+    }
+    console.log(line);
+  }
+
+  function writeEventLine(line) {
+    if (process.stdout.isTTY) {
+      if (lastInlineLen > 0) {
+        // 先结束行内状态，再打印事件日志，避免被下一次 \r 覆盖
+        process.stdout.write("\n");
+        lastInlineLen = 0;
+      }
+      process.stdout.write(`${line}\n`);
+      return;
+    }
+    console.log(line);
+  }
+
   // 最多两帧
   let cur = null;   // 最新帧
   let prev = null;  // 上一帧
@@ -39,8 +62,29 @@ function createEsp32UdpSource(defaultOpts = {}) {
     };
   }
 
-  function dropFrame(frame) {
+  function summarizeMissingParts(frame, maxItems = 12) {
+    const missing = [];
+    for (let i = 0; i < frame.total; i++) {
+      if (frame.parts[i] === null) missing.push(i);
+    }
+    return {
+      count: missing.length,
+      preview: missing.slice(0, maxItems),
+      truncated: missing.length > maxItems,
+    };
+  }
+
+  function dropFrame(frame, reason = "unknown") {
     if (!frame) return;
+
+    if (!frame.completed && frame.received < frame.total) {
+      const miss = summarizeMissingParts(frame);
+      const suffix = miss.truncated ? "..." : "";
+      writeEventLine(
+        `[esp32UdpSource] packet loss: drop frame id=${frame.id}, reason=${reason}, recv=${frame.received}/${frame.total}, missing=${miss.count}, missingIndex=[${miss.preview.join(",")}${suffix}]`
+      );
+    }
+
     frame.completed = true;
   }
 
@@ -65,13 +109,7 @@ function createEsp32UdpSource(defaultOpts = {}) {
       const sec = (now - recvStatWindowStart) / 1000;
       const fps = sec > 0 ? (recvStatCount / sec).toFixed(1) : "0.0";
       const line = `[esp32UdpSource] recv frame id=${frame.id}, size=${buf.length}B, window=${recvStatCount} frames/${sec.toFixed(1)}s (~${fps} FPS)`;
-      if (process.stdout.isTTY) {
-        const pad = Math.max(0, lastInlineLen - line.length);
-        process.stdout.write(`\r${line}${" ".repeat(pad)}`);
-        lastInlineLen = line.length;
-      } else {
-        console.log(line);
-      }
+      writeStatusLine(line);
       recvStatWindowStart = now;
       recvStatCount = 0;
     }
@@ -108,7 +146,7 @@ function createEsp32UdpSource(defaultOpts = {}) {
       frame = prev;
     } else if (!cur || id > cur.id) {
       // 新帧到来
-      dropFrame(prev);
+      dropFrame(prev, "superseded_by_newer_frame");
       prev = cur;
       cur = newFrame(id, total, ts_src);
       if (!cur) return;
@@ -121,7 +159,7 @@ function createEsp32UdpSource(defaultOpts = {}) {
     // ========== 早期裁决 ==========
     if (frame.completed) return;
     if (frame.total !== total) {
-      dropFrame(frame);
+      dropFrame(frame, "inconsistent_total");
       return;
     }
 
@@ -138,7 +176,7 @@ function createEsp32UdpSource(defaultOpts = {}) {
 
       // 如果当前帧完成，旧帧不再有价值
       if (frame === cur && prev) {
-        dropFrame(prev);
+        dropFrame(prev, "older_frame_after_current_complete");
         prev = null;
       }
     }

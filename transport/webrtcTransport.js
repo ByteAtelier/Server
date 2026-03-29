@@ -24,14 +24,14 @@ module.exports = function setupWebRTCTransport(io, frameChannel, videoWidth, vid
   let activeSocketId = null;
 
   io.on("connection", (socket) => {
-    console.log("[signal] connected", socket.id);
+    console.log("\n[signal] connected", socket.id);
 
     // 单客户端保护：新连接踢掉旧连接
     if (singleClient) {
       if (activeSocketId && activeSocketId !== socket.id) {
         const old = io.sockets.sockets.get(activeSocketId);
         if (old) {
-          console.log("[signal] kicking old socket", activeSocketId);
+          console.log("\n[signal] kicking old socket", activeSocketId);
           old.disconnect(true);
         }
       }
@@ -117,7 +117,7 @@ module.exports = function setupWebRTCTransport(io, frameChannel, videoWidth, vid
     });
 
     socket.on("disconnect", () => {
-      console.log("[signal] disconnected", socket.id);
+      console.log("\n[signal] disconnected", socket.id);
       if (singleClient && activeSocketId === socket.id) activeSocketId = null;
       cleanup();
     });
