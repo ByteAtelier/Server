@@ -50,6 +50,25 @@
   align-items: start;
 }
 
+.chartGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(360px, 1fr));
+  gap: 12px;
+  align-items: stretch;
+}
+
+.diagnosisChartGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(420px, 1fr));
+  gap: 12px;
+  align-items: stretch;
+  margin-top: 12px;
+}
+
+.subChartSpacer {
+  height: 8px;
+}
+
 .sectionCard {
   margin-bottom: 0;
   width: 100%;
@@ -114,6 +133,11 @@
   }
 
   .runtimeSecondaryRow {
+    grid-template-columns: 1fr;
+  }
+
+  .chartGrid,
+  .diagnosisChartGrid {
     grid-template-columns: 1fr;
   }
 }

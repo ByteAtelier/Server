@@ -14,7 +14,14 @@ export interface DashboardModuleStatus {
 
 export interface DashboardLatencyMs {
   latestMs: number | null;
-  averageMs: number;
+  averageMs?: number | null;
+  p95Ms?: number | null;
+  p99Ms?: number | null;
+}
+
+export interface DashboardEventLoopLagMs {
+  meanMs: number | null;
+  p99Ms: number | null;
 }
 
 export interface DashboardUpdatePayload {
@@ -23,6 +30,8 @@ export interface DashboardUpdatePayload {
   uptimeMs: number;
   process: {
     uptimeSec: number;
+    cpuPercent: number;
+    eventLoopLagMs: DashboardEventLoopLagMs;
     memory: {
       rss: number;
       heapTotal: number;

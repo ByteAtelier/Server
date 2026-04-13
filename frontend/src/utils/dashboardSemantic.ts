@@ -28,6 +28,8 @@ const NAME_MAP: Record<string, string> = {
   latencyMs: '端到端延迟',
   latestMs: '最新延迟',
   averageMs: '平均延迟',
+  p95Ms: 'P95 延迟',
+  p99Ms: 'P99 延迟',
   modules: '模块状态',
   alive: '存活状态',
   lastSeenAt: '最后活跃时间',
@@ -44,6 +46,9 @@ const NAME_MAP: Record<string, string> = {
   fileCount: '图片总数',
   mediaProcessor: '媒体处理器',
   timestamp: '时间戳',
+  cpuPercent: 'CPU 使用率',
+  eventLoopLagMs: '事件循环延迟',
+  meanMs: '平均延迟',
   decoder: '解码器',
   encoder: '编码器',
   pythonBridge: 'Python 桥接',
@@ -129,6 +134,12 @@ function formatByKey(key: string, value: unknown): string {
   }
 
   if (typeof value === 'number') {
+    if (key === 'cpuPercent') {
+      return `${value.toFixed(2)} %`;
+    }
+    if (key === 'latestMs' || key === 'averageMs' || key === 'p95Ms' || key === 'p99Ms' || key === 'meanMs') {
+      return `${value.toFixed(2)} ms`;
+    }
     if (BYTE_KEYS.has(key)) {
       const mb = (value / 1024 / 1024).toFixed(2);
       return `${mb} MB`;

@@ -1,4 +1,6 @@
 const DASHBOARD_SETUP_KEY = Symbol.for("brightsmile.dashboard.setup");
+const os = require("node:os");
+const { monitorEventLoopDelay } = require("node:perf_hooks");
 
 function createRateCounter() {
 	let total = 0;
@@ -31,34 +33,16 @@ function createRateCounter() {
 }
 
 function createLatencyCounter() {
-	let windowStart = Date.now();
-	let windowCount = 0;
-	let windowSum = 0;
-	let averageMs = 0;
 	let latestMs = null;
 
-	function refresh(now) {
-		const elapsed = now - windowStart;
-		if (elapsed < 1000) return;
-		averageMs = windowCount > 0 ? windowSum / windowCount : averageMs;
-		windowStart = now;
-		windowCount = 0;
-		windowSum = 0;
-	}
-
 	return {
-		tick(latencyMs, now = Date.now()) {
+		tick(latencyMs) {
 			if (!Number.isFinite(latencyMs) || latencyMs < 0) return;
 			latestMs = latencyMs;
-			windowCount += 1;
-			windowSum += latencyMs;
-			refresh(now);
 		},
-		snapshot(now = Date.now()) {
-			refresh(now);
+		snapshot() {
 			return {
 				latestMs: latestMs == null ? null : Number(latestMs.toFixed(2)),
-				averageMs: Number(averageMs.toFixed(2)),
 			};
 		},
 	};
@@ -82,6 +66,11 @@ function setupDashboard(io, {
 	const ingestRate = createRateCounter();
 	const videoRate = createRateCounter();
 	const latency = createLatencyCounter();
+	const cpuCoreCount = Math.max(1, os.cpus().length);
+	let cpuUsagePrev = process.cpuUsage();
+	let cpuUsageTsPrev = Date.now();
+	const loopLagMonitor = monitorEventLoopDelay({ resolution: 20 });
+	loopLagMonitor.enable();
 
 	let ingestLastFrameId = null;
 	let ingestLastTsSrc = null;
@@ -102,7 +91,7 @@ function setupDashboard(io, {
 		videoRate.tick(now);
 		videoLastSeenAt = now;
 		videoLastTsSrc = frame.ts_src;
-		latency.tick(now - frame.ts_src, now);
+		latency.tick(now - frame.ts_src);
 	});
 
 	function connectedClients() {
@@ -114,7 +103,25 @@ function setupDashboard(io, {
 		const mem = process.memoryUsage();
 		const ingest = ingestRate.snapshot(now);
 		const video = videoRate.snapshot(now);
-		const latencySnapshot = latency.snapshot(now);
+		const latencySnapshot = latency.snapshot();
+		const cpuUsageNow = process.cpuUsage();
+		const cpuElapsedMs = Math.max(1, now - cpuUsageTsPrev);
+		const cpuDeltaUs =
+			(cpuUsageNow.user - cpuUsagePrev.user) +
+			(cpuUsageNow.system - cpuUsagePrev.system);
+		const cpuPercent = Number((((cpuDeltaUs / 1000) / (cpuElapsedMs * cpuCoreCount)) * 100).toFixed(2));
+		cpuUsagePrev = cpuUsageNow;
+		cpuUsageTsPrev = now;
+
+		const eventLoopMeanMsRaw = Number(loopLagMonitor.mean / 1e6);
+		const eventLoopP99MsRaw = Number(loopLagMonitor.percentile(99) / 1e6);
+		const eventLoopMeanMs = Number.isFinite(eventLoopMeanMsRaw)
+			? Number(eventLoopMeanMsRaw.toFixed(2))
+			: null;
+		const eventLoopP99Ms = Number.isFinite(eventLoopP99MsRaw)
+			? Number(eventLoopP99MsRaw.toFixed(2))
+			: null;
+		loopLagMonitor.reset();
 		const modules = {
 			ingestBus: {
 				alive: Boolean(ingestLastSeenAt && now - ingestLastSeenAt <= moduleAliveMs),
@@ -136,6 +143,11 @@ function setupDashboard(io, {
 
 		const processInfo = {
 			uptimeSec: Number(process.uptime().toFixed(1)),
+			cpuPercent,
+			eventLoopLagMs: {
+				meanMs: eventLoopMeanMs,
+				p99Ms: eventLoopP99Ms,
+			},
 			memory: {
 				rss: mem.rss,
 				heapTotal: mem.heapTotal,

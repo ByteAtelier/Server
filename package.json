@@ -9,6 +9,7 @@
     "lint:frontend": "npm run biome:frontend && npm run tsc:frontend"
   },
   "dependencies": {
+    "@ant-design/plots": "^2.6.8",
     "antd": "^5.25.4",
     "dgram": "^1.0.1",
     "express": "^5.2.1",
