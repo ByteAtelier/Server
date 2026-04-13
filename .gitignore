@@ -119,3 +119,19 @@ coverage/
 *.bak
 *.old
 *.orig
+
+########################
+# Frontend (frontend/)
+########################
+frontend/node_modules/
+frontend/src/.umi/
+frontend/src/.umi-production/
+frontend/src/.umi-test/
+frontend/src/.umi-test-production/
+frontend/dist/
+frontend/coverage/
+frontend/build/
+frontend/.history/
+frontend/.temp/
+frontend/functions/
+frontend/package-lock.json

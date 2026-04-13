@@ -1,0 +1,27 @@
+{
+  "compilerOptions": {
+    "target": "esnext",
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "jsx": "react-jsx",
+    "esModuleInterop": true,
+    "experimentalDecorators": true,
+    "strict": true,
+    "forceConsistentCasingInFileNames": true,
+    "noImplicitReturns": true,
+    "declaration": true,
+    "skipLibCheck": true,
+    "resolveJsonModule": true,
+    "paths": {
+      "@/*": ["./frontend/src/*"],
+      "@@/*": ["./frontend/src/.umi/*"],
+      "@@test/*": ["./frontend/src/.umi-test/*"]
+    }
+  },
+  "include": [
+    "./frontend/**/*.d.ts",
+    "./frontend/**/*.ts",
+    "./frontend/**/*.tsx"
+  ],
+  "exclude": ["./node_modules", "./frontend/node_modules"]
+}
