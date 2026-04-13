@@ -13,7 +13,7 @@
 
 数据主链路如下：
 
-`source -> ingestBus -> MediaProcessor(decoder -> PythonBridge -> encoder) -> videoBus -> WebRTC transport -> 浏览器`
+`source -> ingestBus -> MediaProcessor(decoder -> PythonBridge -> encoder) -> videoBus -> WebRTC 传输 -> 浏览器`
 
 并行监控链路如下：
 
@@ -268,7 +268,7 @@ npm run lint:frontend
 - `test/turn.html`：TURN/ICE 采集测试
 - `test/test_udp.js`：UDP 回显测试脚本
 
-> 提示：这些页面内的 Socket 地址当前写死为远端地址，若本地联调请改为本机服务地址。
+> 提示：这些页面内的 Socket 地址当前写死为远端地址（如 `http://39.105.171.44:8800`），本地联调时请改为你的本机服务地址（如 `http://localhost:3000` 或你的实际端口）。
 
 ---
 
