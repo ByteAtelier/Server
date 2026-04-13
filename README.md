@@ -3,7 +3,7 @@
 本项目是一个基于 Node.js 的实时视频处理与分发服务，核心能力是：
 
 1. 从图片目录或 ESP32 UDP 数据包持续接收帧；
-2. 在服务端通过 `ffmpeg + Python( YOLO 分割 )` 进行图像处理；
+2. 在服务端通过 `ffmpeg + Python(YOLO 分割)` 进行图像处理；
 3. 将处理后的帧通过 WebRTC（I420）推送到浏览器；
 4. 通过 Dashboard 实时输出链路状态、吞吐、延迟与模块健康信息。
 
@@ -98,7 +98,7 @@
   - 支持单客户端模式（新会话可踢掉旧会话）。
 
 - `transport/socketTransport.js`
-  - 旧/备用 Socket 帧推送逻辑（`frame` 事件，volatile + latest-frame-wins）。
+  - 旧/备用 Socket 帧推送逻辑（`frame` 事件, volatile + latest-frame-wins）。
 
 ### 2.6 Dashboard（服务端）
 
@@ -178,7 +178,7 @@
 
 ### 4.2 系统依赖
 
-- `ffmpeg`（需可在命令行直接执行）
+- `ffmpeg`（需可在命令行直接执行）。
 
 ### 4.3 Python 推理环境
 
