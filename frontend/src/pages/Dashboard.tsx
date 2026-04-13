@@ -5,6 +5,7 @@ import {
   Empty,
   Segmented,
   Space,
+  Tabs,
   Tag,
   Typography,
   message,
@@ -37,6 +38,7 @@ import {
   statusSectionTitle,
   flattenSemanticEntries,
 } from '../utils/dashboardSemantic';
+import type { SemanticEntry } from '../utils/dashboardSemantic';
 import {
   readPath,
   toNumber,
@@ -45,30 +47,35 @@ import {
   fpsLevel,
   splitStatusModules,
   stripLeadingPrefix,
-  renderSemanticCard,
   buildDescriptionSchema,
+  type DescriptionSchema,
 } from '../utils/dashboardView';
+import styles from './Dashboard.module.less';
 
 interface ActiveModuleDetail {
   moduleName: string;
   moduleData: unknown;
 }
 
-const wrapInlineStyle: React.CSSProperties = {
-  display: 'flex',
-  flexWrap: 'wrap',
-  alignItems: 'center',
-  gap: 8,
-  lineHeight: 1.3,
-};
+type DrawerTabKey = 'overview' | 'stats' | 'raw';
 
-const wrapTextStyle: React.CSSProperties = {
-  whiteSpace: 'normal',
-  wordBreak: 'break-word',
-};
+interface MetricCardItem {
+  key: string;
+  title: React.ReactNode;
+  value: number | string;
+  suffix?: string;
+  valueStyle?: React.CSSProperties;
+}
+
+interface RuntimeSection {
+  sectionName: string;
+  title: string;
+  schema: DescriptionSchema;
+}
 
 const metricValueStyle: React.CSSProperties = {
-  ...wrapTextStyle,
+  whiteSpace: 'normal',
+  wordBreak: 'break-word',
   lineHeight: 1.2,
 };
 
@@ -81,8 +88,8 @@ function moduleStatusTag(moduleData: unknown): { text: string; color: 'default' 
 
 function metricTitle(text: string, tagText?: string, tagColor?: string): React.ReactNode {
   return (
-    <div style={wrapInlineStyle}>
-      <Typography.Text style={wrapTextStyle}>{text}</Typography.Text>
+    <div className={styles.wrapInline}>
+      <Typography.Text className={styles.wrapText}>{text}</Typography.Text>
       {tagText && <Tag color={tagColor}>{tagText}</Tag>}
     </div>
   );
@@ -121,6 +128,7 @@ const Dashboard: React.FC = () => {
   const [autoRefresh, setAutoRefresh] = useState(true);
   const [intervalMs, setIntervalMs] = useState(1000);
   const [activeModule, setActiveModule] = useState<ActiveModuleDetail | null>(null);
+  const [drawerTab, setDrawerTab] = useState<DrawerTabKey>('overview');
 
   const statusModules = splitStatusModules(status?.modules);
 
@@ -132,7 +140,6 @@ const Dashboard: React.FC = () => {
   const overwritten =
     toNumber(readPath(status, ['modules', 'pythonBridge', 'stats', 'overwritten'])) ??
     toNumber(readPath(status, ['modules', 'mediaProcessor', 'pythonBridge', 'stats', 'overwritten']));
-  const webrtcState = toStringValue(readPath(status, ['modules', 'webrtc', 'lastConnectionState'])) ?? 'unknown';
   const pythonBridgeAlive =
     toBoolean(readPath(status, ['modules', 'pythonBridge', 'alive'])) ??
     toBoolean(readPath(status, ['modules', 'mediaProcessor', 'pythonBridge', 'alive'])) ??
@@ -144,14 +151,8 @@ const Dashboard: React.FC = () => {
   const ingestFpsLevel = fpsLevel(ingestFps);
   const videoFpsLevel = fpsLevel(videoFps);
 
-  const metricCards: Array<{
-    key: string;
-    title: React.ReactNode;
-    value: number | string;
-    suffix?: string;
-    valueStyle?: React.CSSProperties;
-  }> = [
-    {
+  const pipelineMetrics = useMemo<MetricCardItem[]>(() => {
+    const ingestMetric: MetricCardItem = {
       key: 'ingest-fps',
       title: metricTitle('输入 FPS', ingestFpsLevel.label, ingestFpsLevel.tagColor),
       value: ingestFps === null ? '--' : Number(ingestFps.toFixed(2)),
@@ -159,8 +160,9 @@ const Dashboard: React.FC = () => {
       valueStyle: ingestFpsLevel.valueColor
         ? { ...metricValueStyle, color: ingestFpsLevel.valueColor }
         : metricValueStyle,
-    },
-    {
+    };
+
+    const videoMetric: MetricCardItem = {
       key: 'video-fps',
       title: metricTitle('输出 FPS', videoFpsLevel.label, videoFpsLevel.tagColor),
       value: videoFps === null ? '--' : Number(videoFps.toFixed(2)),
@@ -168,51 +170,72 @@ const Dashboard: React.FC = () => {
       valueStyle: videoFpsLevel.valueColor
         ? { ...metricValueStyle, color: videoFpsLevel.valueColor }
         : metricValueStyle,
-    },
-    {
-      key: 'avg-latency',
-      title: metricTitle('平均延迟'),
-      value: avgLatencyMs === null ? '--' : Number(avgLatencyMs.toFixed(2)),
-      suffix: 'ms',
-      valueStyle: metricValueStyle,
-    },
-    {
-      key: 'overwritten',
-      title: metricTitle('覆盖帧数'),
-      value: overwritten === null ? '--' : overwritten,
-      valueStyle: metricValueStyle,
-    },
-    {
-      key: 'webrtc-state',
-      title: metricTitle('WebRTC 状态'),
-      value: webrtcState,
-      valueStyle: metricValueStyle,
-    },
-    {
-      key: 'python-bridge',
-      title: metricTitle('PythonBridge'),
-      value: pythonBridgeAlive === null ? '未知' : pythonBridgeAlive ? '存活' : '离线',
-      valueStyle: metricValueStyle,
-    },
-    {
-      key: 'source-type',
-      title: metricTitle('数据源'),
-      value: sourceType ?? 'unknown',
-      valueStyle: metricValueStyle,
-    },
-    {
-      key: 'source-fps',
-      title: metricTitle('目标 FPS'),
-      value: sourceTargetFps === null ? '--' : sourceTargetFps,
-      valueStyle: metricValueStyle,
-    },
-  ];
+    };
 
-  const runtimeSections = useMemo(() => {
+    return [
+      ingestMetric,
+      videoMetric,
+      {
+        key: 'avg-latency',
+        title: metricTitle('平均延迟'),
+        value: avgLatencyMs === null ? '--' : Number(avgLatencyMs.toFixed(2)),
+        suffix: 'ms',
+        valueStyle: metricValueStyle,
+      },
+    ];
+  }, [
+    ingestFps,
+    ingestFpsLevel.label,
+    ingestFpsLevel.tagColor,
+    ingestFpsLevel.valueColor,
+    videoFps,
+    videoFpsLevel.label,
+    videoFpsLevel.tagColor,
+    videoFpsLevel.valueColor,
+    avgLatencyMs,
+  ]);
+
+  const bridgeMetrics = useMemo<MetricCardItem[]>(() => {
+    return [
+      {
+        key: 'python-bridge',
+        title: metricTitle('PythonBridge'),
+        value: pythonBridgeAlive === null ? '未知' : pythonBridgeAlive ? '存活' : '离线',
+        valueStyle: metricValueStyle,
+      },
+      {
+        key: 'overwritten',
+        title: metricTitle('覆盖帧数'),
+        value: overwritten === null ? '--' : overwritten,
+        valueStyle: metricValueStyle,
+      },
+    ];
+  }, [
+    pythonBridgeAlive,
+    overwritten,
+  ]);
+
+  const runtimeSections = useMemo<RuntimeSection[]>(() => {
     if (!status) return [];
+
+    const orderMap = new Map<string, number>([
+      ['type', 0],
+      ['ts', 1],
+      ['uptimeMs', 2],
+      ['server', 3],
+      ['process', 4],
+      ['ingest', 5],
+      ['video', 6],
+    ]);
 
     return Object.entries(status)
       .filter(([sectionName]) => sectionName !== 'modules')
+      .sort(([a], [b]) => {
+        const left = orderMap.get(a) ?? Number.MAX_SAFE_INTEGER;
+        const right = orderMap.get(b) ?? Number.MAX_SAFE_INTEGER;
+        if (left !== right) return left - right;
+        return a.localeCompare(b);
+      })
       .map(([sectionName, sectionValue]) => {
         const title = statusSectionTitle(sectionName);
         const entries = statusSectionEntries(sectionName, sectionValue).map((item) => ({
@@ -222,10 +245,30 @@ const Dashboard: React.FC = () => {
         return {
           sectionName,
           title,
-          entries,
+          schema: buildDescriptionSchema(entries),
         };
       });
   }, [status]);
+
+  const runtimeSectionMap = useMemo(() => {
+    const map = new Map<string, RuntimeSection>();
+    runtimeSections.forEach((section) => {
+      map.set(section.sectionName, section);
+    });
+    return map;
+  }, [runtimeSections]);
+
+  const runtimePrimarySections = useMemo(() => {
+    return ['type', 'ts', 'uptimeMs', 'server']
+      .map((sectionName) => runtimeSectionMap.get(sectionName))
+      .filter((section): section is RuntimeSection => Boolean(section));
+  }, [runtimeSectionMap]);
+
+  const runtimeSecondarySections = useMemo(() => {
+    return ['process', 'ingest', 'video']
+      .map((sectionName) => runtimeSectionMap.get(sectionName))
+      .filter((section): section is RuntimeSection => Boolean(section));
+  }, [runtimeSectionMap]);
 
   const configSections = useMemo(() => {
     if (!config) return [];
@@ -244,6 +287,94 @@ const Dashboard: React.FC = () => {
       };
     });
   }, [config]);
+
+  const activeModuleEntries = useMemo(() => {
+    if (!activeModule) return [];
+
+    const title = moduleTitle(activeModule.moduleName);
+    return flattenSemanticEntries(activeModule.moduleData, activeModule.moduleName).map((item) => ({
+      ...item,
+      label: stripLeadingPrefix(item.label, title),
+    }));
+  }, [activeModule]);
+
+  const activeOverviewEntries = useMemo(() => {
+    return activeModuleEntries.filter((item) => {
+      return !item.keyPath.includes('.stats.') && !item.keyPath.endsWith('.stats');
+    });
+  }, [activeModuleEntries]);
+
+  const activeOverviewSchema = useMemo(() => {
+    return buildDescriptionSchema(activeOverviewEntries);
+  }, [activeOverviewEntries]);
+
+  const activeSummarySchema = useMemo(() => {
+    if (!activeModule) return null;
+
+    const statusTag = moduleStatusTag(activeModule.moduleData);
+    const entries: SemanticEntry[] = [
+      { keyPath: 'summary.status', label: '模块状态', value: statusTag.text },
+      {
+        keyPath: 'summary.brief',
+        label: '摘要',
+        value: moduleSummary(activeModule.moduleName, activeModule.moduleData),
+      },
+      {
+        keyPath: 'summary.fieldCount',
+        label: '字段数量',
+        value: String(activeModuleEntries.length),
+      },
+    ];
+
+    return buildDescriptionSchema(entries);
+  }, [activeModule, activeModuleEntries.length]);
+
+  const activeModuleStatsEntries = useMemo(() => {
+    if (!activeModule) return [];
+
+    const statsValue = readPath(activeModule.moduleData, ['stats']);
+    if (!statsValue || typeof statsValue !== 'object' || Array.isArray(statsValue)) {
+      return [];
+    }
+
+    const statsTitle = '统计信息';
+    return flattenSemanticEntries(statsValue, 'stats').map((item) => {
+      const normalized = stripLeadingPrefix(item.label, statsTitle);
+      return {
+        ...item,
+        label: normalized || item.label,
+      };
+    });
+  }, [activeModule]);
+
+  const activeStatsSchema = useMemo(() => {
+    if (!activeModule) return null;
+
+    const numericFieldCount = activeModuleEntries.filter((entry) => /^[-+]?\d+(\.\d+)?$/.test(entry.value)).length;
+    const boolLikeFieldCount = activeModuleEntries.filter((entry) => /(√|×|是|否)$/.test(entry.value)).length;
+    const latestTs =
+      toNumber(readPath(activeModule.moduleData, ['lastSeenAt'])) ??
+      toNumber(readPath(activeModule.moduleData, ['lastOfferAt'])) ??
+      toNumber(readPath(activeModule.moduleData, ['startedAt']));
+
+    const aggregateEntries: SemanticEntry[] = [
+      { keyPath: 'stats.total', label: '总字段数', value: String(activeModuleEntries.length) },
+      { keyPath: 'stats.numeric', label: '数值字段数', value: String(numericFieldCount) },
+      { keyPath: 'stats.boolLike', label: '状态字段数', value: String(boolLikeFieldCount) },
+      {
+        keyPath: 'stats.latest',
+        label: '最近时间',
+        value: latestTs === null ? '-' : new Date(latestTs).toLocaleString(),
+      },
+    ];
+
+    const entries: SemanticEntry[] = [
+      ...activeModuleStatsEntries,
+      ...aggregateEntries,
+    ];
+
+    return buildDescriptionSchema(entries);
+  }, [activeModule, activeModuleEntries, activeModuleStatsEntries]);
 
   const requestSnapshot = (withConfig: boolean) => {
     const socket = getSocket();
@@ -305,6 +436,12 @@ const Dashboard: React.FC = () => {
     socket.emit('dashboard:unsubscribe');
   }, [autoRefresh, intervalMs]);
 
+  useEffect(() => {
+    if (activeModule) {
+      setDrawerTab('overview');
+    }
+  }, [activeModule?.moduleName]);
+
   return (
     <PageContainer
       title="BrightSmile Dashboard"
@@ -357,81 +494,90 @@ const Dashboard: React.FC = () => {
     >
       <ProCard direction="column" gutter={[16, 16]} ghost>
         <ProCard title="核心指标" bordered>
-          <div
-            style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
-              gap: 12,
-            }}
-          >
-            {metricCards.map((metric) => (
-              <StatisticCard
-                key={metric.key}
-                bordered
-                style={{ minWidth: 0 }}
-                statistic={{
-                  title: metric.title,
-                  value: metric.value,
-                  suffix: metric.suffix,
-                  valueStyle: metric.valueStyle,
-                }}
-              />
-            ))}
+          <div className={styles.metricTopLayout}>
+            <ProCard title="链路性能" size="small" bordered className={styles.fillCard}>
+              <div className={styles.pipelineMetricGrid}>
+                {pipelineMetrics.map((metric) => (
+                  <StatisticCard
+                    key={metric.key}
+                    bordered
+                    className={styles.fillCard}
+                    statistic={{
+                      title: metric.title,
+                      value: metric.value,
+                      suffix: metric.suffix,
+                      valueStyle: metric.valueStyle,
+                    }}
+                  />
+                ))}
+              </div>
+            </ProCard>
+
+            <ProCard title="桥接状态" size="small" bordered className={styles.fillCard}>
+              <div className={styles.bridgeMetricGrid}>
+                {bridgeMetrics.map((metric) => (
+                  <StatisticCard
+                    key={metric.key}
+                    bordered
+                    className={styles.fillCard}
+                    statistic={{
+                      title: metric.title,
+                      value: metric.value,
+                      suffix: metric.suffix,
+                      valueStyle: metric.valueStyle,
+                    }}
+                  />
+                ))}
+              </div>
+            </ProCard>
           </div>
         </ProCard>
 
         <ProCard
           title={<span><SyncOutlined spin /> 运行态概览</span>}
           headerBordered
+          direction="column"
         >
           {status ? (
-            runtimeSections.map((section) => (
-              <ProCard key={section.sectionName} size="small" title={section.title} bordered style={{ marginBottom: 8 }}>
-                <div
-                  style={{
-                    display: 'grid',
-                    gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
-                    gap: 8,
-                  }}
-                >
-                  {section.entries.map((entry) => (
-                    <div
-                      key={`runtime:${section.sectionName}:${entry.keyPath}`}
-                      style={{
-                        border: '1px solid #f0f0f0',
-                        borderRadius: 8,
-                        padding: '8px 10px',
-                        minHeight: 72,
-                      }}
-                    >
-                      <Typography.Text
-                        type="secondary"
-                        style={{
-                          display: 'block',
-                          fontSize: 12,
-                          lineHeight: 1.3,
-                          ...wrapTextStyle,
-                        }}
-                      >
-                        {entry.label}
-                      </Typography.Text>
-                      <Typography.Text
-                        style={{
-                          display: 'block',
-                          marginTop: 6,
-                          fontSize: 14,
-                          lineHeight: 1.35,
-                          ...wrapTextStyle,
-                        }}
-                        strong
-                      >
-                        {entry.value}
-                      </Typography.Text>
-                    </div>
-                  ))}
-                </div>
-              </ProCard>
-            ))
+            <div className={styles.runtimeOverviewLayout}>
+              <div className={styles.runtimePrimaryColumn}>
+                {runtimePrimarySections.map((section) => (
+                  <ProCard
+                    key={`runtime-primary:${section.sectionName}`}
+                    size="small"
+                    title={section.title}
+                    bordered
+                    className={styles.sectionCard}
+                  >
+                    <ProDescriptions
+                      size="small"
+                      column={1}
+                      columns={section.schema.columns}
+                      dataSource={section.schema.dataSource}
+                    />
+                  </ProCard>
+                ))}
+              </div>
+
+              <div className={styles.runtimeSecondaryRow}>
+                {runtimeSecondarySections.map((section) => (
+                  <ProCard
+                    key={`runtime-secondary:${section.sectionName}`}
+                    size="small"
+                    title={section.title}
+                    bordered
+                    className={styles.sectionCard}
+                  >
+                    <ProDescriptions
+                      size="small"
+                      column={1}
+                      columns={section.schema.columns}
+                      dataSource={section.schema.dataSource}
+                    />
+                  </ProCard>
+                ))}
+              </div>
+            </div>
           ) : (
             <Empty description="等待实时状态数据" image={Empty.PRESENTED_IMAGE_SIMPLE} />
           )}
@@ -443,14 +589,7 @@ const Dashboard: React.FC = () => {
           extra={<Tag color="blue">{statusModules.length} modules</Tag>}
         >
           {status ? (
-            <div
-              style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))',
-                gap: 12,
-                alignItems: 'stretch',
-              }}
-            >
+            <div className={styles.moduleGrid}>
               {statusModules.map(({ moduleName, moduleData }) => {
                 const statusTag = moduleStatusTag(moduleData);
                 return (
@@ -458,10 +597,10 @@ const Dashboard: React.FC = () => {
                     key={`summary:${moduleName}`}
                     size="small"
                     bordered
-                    style={{ minWidth: 0, height: '100%' }}
+                    className={styles.fillCard}
                     title={
-                      <div style={wrapInlineStyle}>
-                        <span style={wrapTextStyle}>{moduleTitle(moduleName)}</span>
+                      <div className={styles.wrapInline}>
+                        <span className={styles.wrapText}>{moduleTitle(moduleName)}</span>
                         <Tag color={statusTag.color}>{statusTag.text}</Tag>
                       </div>
                     }
@@ -474,7 +613,7 @@ const Dashboard: React.FC = () => {
                       </Button>
                     }
                   >
-                    <Typography.Text type="secondary" style={wrapTextStyle}>
+                    <Typography.Text type="secondary" className={styles.summaryText}>
                       {moduleSummary(moduleName, moduleData)}
                     </Typography.Text>
                   </ProCard>
@@ -489,23 +628,17 @@ const Dashboard: React.FC = () => {
         <ProCard
           title={<span><SettingOutlined /> 配置快照</span>}
           headerBordered
+          extra={<Tag color="geekblue">{configSections.length} modules</Tag>}
         >
           {config ? (
-            <div
-              style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
-                gap: 12,
-                alignItems: 'stretch',
-              }}
-            >
+            <div className={styles.configGrid}>
               {configSections.map((section) => (
                 <ProCard
                   key={`config-card:${section.moduleName}`}
                   size="small"
                   bordered
-                  style={{ minWidth: 0, height: '100%' }}
-                  title={<span style={wrapTextStyle}>{section.title}</span>}
+                  className={styles.fillCard}
+                  title={<span className={styles.wrapText}>{section.title}</span>}
                 >
                   <ProDescriptions
                     size="small"
@@ -529,13 +662,61 @@ const Dashboard: React.FC = () => {
         destroyOnClose
         title={activeModule ? `${moduleTitle(activeModule.moduleName)} 详情` : '模块详情'}
       >
-        {activeModule &&
-          renderSemanticCard(
-            moduleTitle(activeModule.moduleName),
-            flattenSemanticEntries(activeModule.moduleData, activeModule.moduleName),
-            `drawer:${activeModule.moduleName}`,
-            true,
-          )}
+        {activeModule ? (
+          <ProCard direction="column" ghost gutter={[12, 12]}>
+            {activeSummarySchema && (
+              <ProCard title="状态摘要" size="small" bordered>
+                <ProDescriptions
+                  size="small"
+                  column={1}
+                  columns={activeSummarySchema.columns}
+                  dataSource={activeSummarySchema.dataSource}
+                />
+              </ProCard>
+            )}
+
+            <Tabs
+              className={styles.drawerTabs}
+              activeKey={drawerTab}
+              onChange={(key) => setDrawerTab(key as DrawerTabKey)}
+              items={[
+                {
+                  key: 'overview',
+                  label: '概览',
+                  children: (
+                    <ProDescriptions
+                      size="small"
+                      column={1}
+                      columns={activeOverviewSchema.columns}
+                      dataSource={activeOverviewSchema.dataSource}
+                    />
+                  ),
+                },
+                {
+                  key: 'stats',
+                  label: '统计',
+                  children: activeStatsSchema ? (
+                    <ProDescriptions
+                      size="small"
+                      column={1}
+                      columns={activeStatsSchema.columns}
+                      dataSource={activeStatsSchema.dataSource}
+                    />
+                  ) : (
+                    <Empty description="暂无统计信息" image={Empty.PRESENTED_IMAGE_SIMPLE} />
+                  ),
+                },
+                {
+                  key: 'raw',
+                  label: '原始字段',
+                  children: <pre className={styles.drawerRaw}>{JSON.stringify(activeModule.moduleData, null, 2)}</pre>,
+                },
+              ]}
+            />
+          </ProCard>
+        ) : (
+          <Empty description="请选择模块查看详情" image={Empty.PRESENTED_IMAGE_SIMPLE} />
+        )}
       </Drawer>
     </PageContainer>
   );

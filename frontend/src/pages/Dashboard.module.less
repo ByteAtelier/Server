@@ -1,0 +1,119 @@
+.wrapInline {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  line-height: 1.3;
+}
+
+.wrapText {
+  white-space: normal;
+  word-break: break-word;
+}
+
+.metricTopLayout {
+  display: grid;
+  grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+  gap: 12px;
+  align-items: stretch;
+}
+
+.pipelineMetricGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.bridgeMetricGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.runtimeOverviewLayout {
+  display: grid;
+  grid-template-columns: minmax(260px, 0.9fr) minmax(0, 2.1fr);
+  gap: 12px;
+  align-items: start;
+}
+
+.runtimePrimaryColumn {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.runtimeSecondaryRow {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(0, 1fr) minmax(0, 1fr);
+  gap: 8px;
+  align-items: start;
+}
+
+.sectionCard {
+  margin-bottom: 0;
+  width: 100%;
+}
+
+.moduleGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+  gap: 12px;
+  align-items: stretch;
+}
+
+.configGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 12px;
+  align-items: stretch;
+}
+
+.fillCard {
+  min-width: 0;
+  height: 100%;
+}
+
+.summaryText {
+  display: block;
+  white-space: normal;
+  word-break: break-word;
+}
+
+.drawerRaw {
+  margin: 0;
+  padding: 12px;
+  border: 1px solid #f0f0f0;
+  border-radius: 8px;
+  background: #fafafa;
+  max-height: 56vh;
+  overflow: auto;
+  font-size: 12px;
+  line-height: 1.45;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+
+.drawerTabs {
+  margin-top: 8px;
+}
+
+@media (max-width: 900px) {
+  .pipelineMetricGrid,
+  .bridgeMetricGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 1280px) {
+  .metricTopLayout {
+    grid-template-columns: 1fr;
+  }
+
+  .runtimeOverviewLayout {
+    grid-template-columns: 1fr;
+  }
+
+  .runtimeSecondaryRow {
+    grid-template-columns: 1fr;
+  }
+}
