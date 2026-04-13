@@ -23,6 +23,8 @@ function createImageLoopSource(defaultOpts = {}) {
   let frameId = 0;
   let index = 0;
   let timer = null;
+  let running = false;
+  let lastFrameAt = null;
 
   const files = fs
     .readdirSync(opts.imageDir)
@@ -58,6 +60,8 @@ function createImageLoopSource(defaultOpts = {}) {
       data: resized,
     });
 
+    lastFrameAt = Date.now();
+
     index = (index + 1) % files.length;
   }
 
@@ -74,6 +78,8 @@ function createImageLoopSource(defaultOpts = {}) {
       });
     }, intervalMs);
 
+    running = true;
+
     console.log(
       `[imageLoopSource] Started @ ${opts.fps} FPS (${opts.width}x${opts.height})`
     );
@@ -83,10 +89,29 @@ function createImageLoopSource(defaultOpts = {}) {
     if (!timer) return;
     clearInterval(timer);
     timer = null;
+    running = false;
     console.log("[imageLoopSource] Stopped");
   }
 
-  return { start, stop };
+  function getStatus() {
+    return {
+      alive: running,
+      running,
+      frameId,
+      lastFrameAt,
+      index,
+      fileCount: files.length,
+      params: {
+        imageDir: opts.imageDir,
+        fps: opts.fps,
+        width: opts.width,
+        height: opts.height,
+        jpegQuality: opts.jpegQuality,
+      },
+    };
+  }
+
+  return { start, stop, getStatus };
 }
 
 module.exports = { createImageLoopSource };

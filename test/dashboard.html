@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<title>Full Dashboard</title>
+<style>
+body{font-family:monospace;background:#111;color:#eee;padding:20px}
+button{margin:5px}
+pre{background:#000;padding:10px;border:1px solid #333;overflow:auto}
+</style>
+</head>
+<body>
+<h2>Dashboard Raw Output</h2>
+
+<button onclick="connect()">连接</button>
+<button onclick="subscribe()">订阅</button>
+<button onclick="requestOnce()">单次请求</button>
+<button onclick="unsubscribe()">取消订阅</button>
+
+<pre id="output">等待数据...</pre>
+
+<script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+<script>
+let socket = null;
+
+function connect(){
+  if(socket) return;
+
+  socket = io("http://39.105.171.44:8800", {
+    transports:["websocket"],
+    upgrade:false
+  });
+
+  socket.on("connect", ()=>{
+    log("[connect] " + socket.id);
+  });
+
+  socket.on("disconnect", ()=>{
+    log("[disconnect]");
+  });
+
+  socket.on("dashboard:update", (data)=>{
+    document.getElementById("output").textContent = JSON.stringify(data, null, 2);
+  });
+
+  // 调试：捕获所有事件
+  socket.onAny((event, ...args)=>{
+    console.log("event:", event, args);
+  });
+}
+
+function subscribe(){
+  if(!socket) connect();
+  socket.emit("dashboard:subscribe", {intervalMs:1000});
+}
+
+function requestOnce(){
+  if(!socket) connect();
+  socket.emit("dashboard:request", {});
+}
+
+function unsubscribe(){
+  if(socket) socket.emit("dashboard:unsubscribe");
+}
+
+function log(msg){
+  document.getElementById("output").textContent = msg;
+}
+</script>
+</body>
+</html>

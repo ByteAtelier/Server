@@ -5,6 +5,8 @@ class VideoBus extends EventEmitter {
     super();
     this._stableBuf = null; // VideoBus 自己持有的稳定内存
     this._latest = null;    // { data: Buffer, ...meta }（对象也复用）
+    this._totalFrames = 0;
+    this._lastSeenAt = null;
   }
 
   // frame: { data: Buffer|Uint8Array, ...meta }
@@ -32,6 +34,9 @@ class VideoBus extends EventEmitter {
       this._latest[k] = frame[k];
     }
 
+    this._totalFrames += 1;
+    this._lastSeenAt = Date.now();
+
     this.emit("frame", this._latest);
   }
 
@@ -41,6 +46,16 @@ class VideoBus extends EventEmitter {
 
   clear() {
     this._latest = null;
+  }
+
+  getStatus() {
+    return {
+      alive: true,
+      totalFrames: this._totalFrames,
+      lastSeenAt: this._lastSeenAt,
+      lastTsSrc: this._latest ? this._latest.ts_src : null,
+      hasLatestFrame: this._latest !== null,
+    };
   }
 }
 

@@ -22,21 +22,14 @@ module.exports = function setupWebRTCTransport(io, frameChannel, videoWidth, vid
   });
 
   let activeSocketId = null;
+  let signalSocketCount = 0;
+  let lastOfferAt = null;
+  let lastConnectionState = "new";
+  let hasActivePeer = false;
 
   io.on("connection", (socket) => {
     console.log("\n[signal] connected", socket.id);
-
-    // 单客户端保护：新连接踢掉旧连接
-    if (singleClient) {
-      if (activeSocketId && activeSocketId !== socket.id) {
-        const old = io.sockets.sockets.get(activeSocketId);
-        if (old) {
-          console.log("\n[signal] kicking old socket", activeSocketId);
-          old.disconnect(true);
-        }
-      }
-      activeSocketId = socket.id;
-    }
+    signalSocketCount += 1;
 
     let pc = null;
     let videoSource = null;
@@ -55,6 +48,8 @@ module.exports = function setupWebRTCTransport(io, frameChannel, videoWidth, vid
       pc = null;
       videoSource = null;
       videoTrack = null;
+      hasActivePeer = false;
+      lastConnectionState = "closed";
     };
 
     const startPump = () => {
@@ -83,6 +78,17 @@ module.exports = function setupWebRTCTransport(io, frameChannel, videoWidth, vid
     };
 
     socket.on("webrtc:offer", async (offer) => {
+      // 单客户端保护：仅对真正发起 WebRTC 的连接生效，避免误伤 dashboard/socket 连接
+      if (singleClient && activeSocketId && activeSocketId !== socket.id) {
+        const old = io.sockets.sockets.get(activeSocketId);
+        if (old) {
+          console.log("\n[signal] kicking old socket", activeSocketId);
+          old.disconnect(true);
+        }
+      }
+      if (singleClient) activeSocketId = socket.id;
+      lastOfferAt = Date.now();
+
       cleanup();
 
       const newPc = new wrtc.RTCPeerConnection({ iceServers });
@@ -94,6 +100,8 @@ module.exports = function setupWebRTCTransport(io, frameChannel, videoWidth, vid
 
       newPc.onconnectionstatechange = () => {
         console.log("[pc] state:", newPc.connectionState);
+        lastConnectionState = newPc.connectionState;
+        hasActivePeer = newPc.connectionState === "connecting" || newPc.connectionState === "connected";
       };
 
       videoSource = new wrtc.nonstandard.RTCVideoSource();
@@ -118,8 +126,29 @@ module.exports = function setupWebRTCTransport(io, frameChannel, videoWidth, vid
 
     socket.on("disconnect", () => {
       console.log("\n[signal] disconnected", socket.id);
+      signalSocketCount = Math.max(0, signalSocketCount - 1);
       if (singleClient && activeSocketId === socket.id) activeSocketId = null;
       cleanup();
     });
   });
+
+  return {
+    getStatus() {
+      return {
+        alive: true,
+        signalSocketCount,
+        activeSocketId,
+        lastOfferAt,
+        lastConnectionState,
+        hasActivePeer,
+        params: {
+          fps,
+          singleClient,
+          videoWidth,
+          videoHeight,
+          turnUrls: turn.urls || [],
+        },
+      };
+    },
+  };
 };

@@ -1,6 +1,9 @@
 const path = require("path");
 
 const APP_CONFIG = {
+  server:{
+    port: 3000,
+  },
   media: {
     fps: 30,
     width: 640,
@@ -31,12 +34,16 @@ const APP_CONFIG = {
       credential: "DnDzRttdGVB25MntSpAEUDxrxvkwBjP8",
     },
   },
+  dashboard: {
+    defaultIntervalMs: 1000,
+    moduleAliveMs: 3000,
+  },
   source: {
     // 可选: "imageLoop" | "esp32Udp"
-    type: "esp32Udp",
+    type: "imageLoop",
     imageLoop: {
-      fps: 30,
-      imageDir: "D:\\Code\\BrightSmile\\AI\\datas\\Benchmarking Dataset\\train\\images",
+      fps: 20,
+      imageDir: "D:\\Code\\BrightSmile\\AI\\datas\\video",
       jpegQuality: 80,
     },
     esp32Udp: {

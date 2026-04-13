@@ -32,15 +32,18 @@ class PythonBridge {
     this.scriptPath = opts.scriptPath || path.join(__dirname, "index.py");
     this.scriptArgs = opts.scriptArgs || {};
 
-    this.onLog = typeof opts.onLog === "function" ? opts.onLog : () => {};
+    this.onLog = opts.onLog;
 
     // onFrame：Python 输出的“处理后完整图像（BGR24）”唯一出口，下游（编码/传输）从这里取帧
-    this.onFrame = typeof opts.onFrame === "function" ? opts.onFrame : () => {};
+    this.onFrame = opts.onFrame;
 
     this._payloadLen = this.width * this.height * CHANNELS_BGR;
 
     this._proc = null;
     this._alive = false;
+    this._startedAt = null;
+    this._lastError = null;
+    this._lastExit = null;
 
     // stdout 组包缓冲（header+payload 连续字节流）
     this._stdoutBuf = Buffer.alloc(0);
@@ -72,6 +75,9 @@ class PythonBridge {
 
     this._proc = p;
     this._alive = true;
+    this._startedAt = Date.now();
+    this._lastError = null;
+    this._lastExit = null;
 
     this.onLog(
       `[PythonBridge] start pythonBin=${this.pythonBin} scriptPath=${this.scriptPath} w=${this.width} h=${this.height} args=${JSON.stringify(this.scriptArgs)}`
@@ -79,11 +85,17 @@ class PythonBridge {
 
     p.on("error", (err) => {
       this._alive = false;
+      this._lastError = err?.message || String(err);
       this.onLog(`[PythonBridge] process error: ${err?.message || err}`);
     });
 
     p.on("exit", (code, signal) => {
       this._alive = false;
+      this._lastExit = {
+        code,
+        signal,
+        at: Date.now(),
+      };
       this.onLog(`[PythonBridge] python exited code=${code} signal=${signal}`);
     });
 
@@ -240,6 +252,31 @@ class PythonBridge {
       // 以 Python 输出节拍驱动下一次输入
       this._trySendNext();
     }
+  }
+
+  getStatus() {
+    return {
+      alive: this.isAlive(),
+      pid: this._proc ? this._proc.pid : null,
+      startedAt: this._startedAt,
+      lastError: this._lastError,
+      lastExit: this._lastExit,
+      width: this.width,
+      height: this.height,
+      payloadLen: this._payloadLen,
+      pythonBin: this.pythonBin,
+      scriptPath: this.scriptPath,
+      scriptArgs: this.scriptArgs,
+      inFlight: this._inFlight,
+      stdinDraining: this._stdinDraining,
+      mailboxPending: this._mailbox !== null,
+      stats: {
+        inFrames: this.stats.inFrames,
+        overwritten: this.stats.overwritten,
+        sentFrames: this.stats.sentFrames,
+        outFrames: this.stats.outFrames,
+      },
+    };
   }
 }
 

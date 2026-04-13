@@ -202,6 +202,21 @@ class FfmpegCodec {
       }
     }
   }
+
+  getStatus() {
+    return {
+      alive: this._proc !== null,
+      mode: this.mode,
+      width: this.width,
+      height: this.height,
+      pid: this._proc ? this._proc.pid : null,
+      stdinBusy: this._stdinBusy,
+      queueBytes: this._chunksBytes,
+      queueChunks: this._chunks.length,
+      frameSize: this.frameSize,
+      closed: this._closed,
+    };
+  }
 }
 
 module.exports = FfmpegCodec;

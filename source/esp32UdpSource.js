@@ -273,7 +273,23 @@ function createEsp32UdpSource(defaultOpts = {}) {
     console.log("[esp32UdpSource] Stopped");
   }
 
-  return { start, stop };
+  function getStatus() {
+    return {
+      alive: running,
+      running,
+      bound: socket !== null,
+      host: opts.host,
+      port: opts.port,
+      codec: opts.codec,
+      width: opts.width,
+      height: opts.height,
+      lastFrameId,
+      recvStatCount,
+      dropStatCount,
+    };
+  }
+
+  return { start, stop, getStatus };
 }
 
 module.exports = { createEsp32UdpSource };

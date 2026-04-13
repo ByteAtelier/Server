@@ -12,6 +12,7 @@ class MediaProcessor {
     this.pythonBridgeConfig = pythonBridge;
     this.timestamp = 0;
     this.frameId = 0; // 用于标记帧的递增 ID
+    this.running = false;
   }
 
   start() {
@@ -46,6 +47,7 @@ class MediaProcessor {
       onFrame: this.handlePythonFrame.bind(this),
     });
     this.pythonBridge.start();
+    this.running = true;
 
     // 监听来自 ingestBus 的新 JPEG 数据
     this.ingestBus.on("frame", (pkt) => {
@@ -90,7 +92,22 @@ class MediaProcessor {
     if (this.decoder) this.decoder.stop(); // 停止解码器
     if (this.encoder) this.encoder.stop(); // 停止编码器
     if (this.pythonBridge) this.pythonBridge.stop(); // 停止 Python 桥接
+    this.running = false;
     console.log("[MediaProcessor] Stopped");
+  }
+
+  getStatus() {
+    return {
+      alive: this.running,
+      fps: this.fps,
+      width: this.width,
+      height: this.height,
+      timestamp: this.timestamp,
+      frameId: this.frameId,
+      decoder: this.decoder ? this.decoder.getStatus() : { alive: false },
+      encoder: this.encoder ? this.encoder.getStatus() : { alive: false },
+      pythonBridge: this.pythonBridge.getStatus(),
+    };
   }
 }
 

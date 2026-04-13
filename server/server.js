@@ -10,7 +10,16 @@ function createServer({ corsOrigin = "*" } = {}) {
     cors: { origin: corsOrigin },
   });
 
-  return { app, httpServer, io };
+  function getStatus() {
+    return {
+      alive: httpServer.listening,
+      listening: httpServer.listening,
+      connectedClients: io.engine.clientsCount,
+      corsOrigin,
+    };
+  }
+
+  return { app, httpServer, io, getStatus };
 }
 
 module.exports = { createServer };
