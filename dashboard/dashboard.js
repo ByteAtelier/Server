@@ -67,8 +67,6 @@ function createLatencyCounter() {
 function setupDashboard(io, {
 	ingestBus,
 	videoBus,
-	sourceType = null,
-	media = {},
 	options = {},
 	params = {},
 	statusProviders = {},
@@ -136,28 +134,23 @@ function setupDashboard(io, {
 			modules[name] = provider();
 		}
 
+		const processInfo = {
+			uptimeSec: Number(process.uptime().toFixed(1)),
+			memory: {
+				rss: mem.rss,
+				heapTotal: mem.heapTotal,
+				heapUsed: mem.heapUsed,
+				external: mem.external,
+			},
+		};
+
 		return {
 			type: "dashboard:update",
 			ts: now,
 			uptimeMs: now - startedAt,
-			process: {
-				pid: process.pid,
-				uptimeSec: Number(process.uptime().toFixed(1)),
-				memory: {
-					rss: mem.rss,
-					heapTotal: mem.heapTotal,
-					heapUsed: mem.heapUsed,
-					external: mem.external,
-				},
-			},
+			process: processInfo,
 			server: {
 				connectedClients: connectedClients(),
-				sourceType,
-				media: {
-					width: media.width,
-					height: media.height,
-					fps: media.fps,
-				},
 			},
 			ingest: {
 				fps: ingest.fps,
@@ -172,7 +165,14 @@ function setupDashboard(io, {
 				latencyMs: latencySnapshot,
 			},
 			modules,
-			params,
+		};
+	}
+
+	function buildConfigSnapshot() {
+		return {
+			type: "dashboard:config",
+			ts: Date.now(),
+			config: params,
 		};
 	}
 
@@ -190,29 +190,43 @@ function setupDashboard(io, {
 			socket.emit("dashboard:update", buildSnapshot());
 		}
 
+		function pushConfig() {
+			socket.emit("dashboard:config", buildConfigSnapshot());
+		}
+
 		function startPush(intervalMs) {
 			const pushIntervalMs = intervalMs ?? defaultIntervalMs;
-			const alreadySubscribed = pushTimer !== null;
-			stopPush();
-			if (!alreadySubscribed) subscriberCount += 1;
+			if (pushTimer) {
+				clearInterval(pushTimer);
+			} else {
+				subscriberCount += 1;
+			}
 			pushTimer = setInterval(pushNow, pushIntervalMs);
 
 			socket.emit("dashboard:subscribed", {
 				intervalMs: pushIntervalMs,
 			});
 
+			pushConfig();
 			pushNow();
 		}
 
-		socket.on("dashboard:request", (payload) => {
+		socket.on("dashboard:request", (payload = {}) => {
 			pushNow();
+			if (payload.withConfig === true) {
+				pushConfig();
+			}
 			if (payload.subscribe === true) {
 				startPush(payload.intervalMs);
 			}
 		});
 
-		socket.on("dashboard:subscribe", (payload) => {
+		socket.on("dashboard:subscribe", (payload = {}) => {
 			startPush(payload.intervalMs);
+		});
+
+		socket.on("dashboard:config:request", () => {
+			pushConfig();
 		});
 
 		socket.on("dashboard:unsubscribe", () => {
@@ -227,6 +241,7 @@ function setupDashboard(io, {
 
 	const api = {
 		buildSnapshot,
+		buildConfigSnapshot,
 		getStatus() {
 			return {
 				alive: true,

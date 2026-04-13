@@ -25,12 +25,6 @@ function main() {
   dashboardModule = setupDashboard(io, {
     ingestBus,
     videoBus,
-    sourceType: APP_CONFIG.source.type,
-    media: {
-      width,
-      height,
-      fps: APP_CONFIG.media.fps,
-    },
     options: APP_CONFIG.dashboard,
     params: {
       server: {
@@ -43,28 +37,117 @@ function main() {
       },
       source: {
         type: APP_CONFIG.source.type,
-        config: APP_CONFIG.source[APP_CONFIG.source.type],
+        imageLoop: {
+          fps: APP_CONFIG.source.imageLoop.fps,
+          jpegQuality: APP_CONFIG.source.imageLoop.jpegQuality,
+        },
+        esp32Udp: {
+          port: APP_CONFIG.source.esp32Udp.port,
+          codec: APP_CONFIG.source.esp32Udp.codec,
+          headerBytes: APP_CONFIG.source.esp32Udp.headerBytes,
+          udpMaxPayload: APP_CONFIG.source.esp32Udp.udpMaxPayload,
+        },
       },
       webrtc: {
         fps: APP_CONFIG.webrtc.fps,
         singleClient: APP_CONFIG.webrtc.singleClient,
-        turnUrls: APP_CONFIG.webrtc.turn.urls,
+      },
+      yolo: {
+        imgsz: APP_CONFIG.media.pythonBridge.scriptArgs.imgsz,
+        conf: APP_CONFIG.media.pythonBridge.scriptArgs.conf,
+        iou: APP_CONFIG.media.pythonBridge.scriptArgs.iou,
+        maxDet: APP_CONFIG.media.pythonBridge.scriptArgs["max-det"],
+        maskAlpha: APP_CONFIG.media.pythonBridge.scriptArgs["mask-alpha"],
       },
       dashboard: {
         defaultIntervalMs: APP_CONFIG.dashboard.defaultIntervalMs,
+        moduleAliveMs: APP_CONFIG.dashboard.moduleAliveMs,
       },
     },
     statusProviders: {
-      server: () => getServerStatus(),
-      source: () => (source ? source.getStatus() : { alive: false }),
-      mediaProcessor: () => (mediaProcessor ? mediaProcessor.getStatus() : { alive: false }),
-      pythonBridge: () => {
-        if (!mediaProcessor) return { alive: false };
-        return mediaProcessor.getStatus().pythonBridge;
+      server: () => {
+        const s = getServerStatus();
+        return {
+          alive: s.alive,
+          listening: s.listening,
+        };
       },
-      ingestBus: () => ingestBus.getStatus(),
-      videoBus: () => videoBus.getStatus(),
-      webrtc: () => webrtcTransport.getStatus(),
+      source: () => {
+        if (!source) {
+          return {
+            alive: false,
+            running: false,
+            type: APP_CONFIG.source.type,
+          };
+        }
+
+        const s = source.getStatus();
+
+        if (APP_CONFIG.source.type === "imageLoop") {
+          return {
+            alive: s.alive,
+            running: s.running,
+            type: "imageLoop",
+            frameId: s.frameId,
+            lastFrameAt: s.lastFrameAt,
+            index: s.index,
+            fileCount: s.fileCount,
+          };
+        }
+
+        if (APP_CONFIG.source.type === "esp32Udp") {
+          return {
+            alive: s.alive,
+            running: s.running,
+            type: "esp32Udp",
+            bound: s.bound,
+            port: s.port,
+            codec: s.codec,
+            lastFrameId: s.lastFrameId,
+            recvStatCount: s.recvStatCount,
+            dropStatCount: s.dropStatCount,
+          };
+        }
+
+        return {
+          alive: s.alive,
+          running: s.running,
+          type: APP_CONFIG.source.type,
+        };
+      },
+      mediaProcessor: () => {
+        if (!mediaProcessor) return { alive: false };
+        const m = mediaProcessor.getStatus();
+        return {
+          alive: m.alive,
+          frameId: m.frameId,
+          timestamp: m.timestamp,
+          decoder: {
+            alive: m.decoder.alive,
+          },
+          encoder: {
+            alive: m.encoder.alive,
+          },
+          pythonBridge: {
+            alive: m.pythonBridge.alive,
+            inFlight: m.pythonBridge.inFlight,
+            stdinDraining: m.pythonBridge.stdinDraining,
+            mailboxPending: m.pythonBridge.mailboxPending,
+            stats: m.pythonBridge.stats,
+          },
+        };
+      },
+      webrtc: () => {
+        const w = webrtcTransport.getStatus();
+        return {
+          alive: w.alive,
+          signalSocketCount: w.signalSocketCount,
+          activeSocketId: w.activeSocketId,
+          lastOfferAt: w.lastOfferAt,
+          lastConnectionState: w.lastConnectionState,
+          hasActivePeer: w.hasActivePeer,
+        };
+      },
       dashboard: () => dashboardModule.getStatus(),
     },
   });
