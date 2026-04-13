@@ -171,16 +171,16 @@
 
 ## 4. 运行前准备
 
-## 4.1 Node 环境
+### 4.1 Node 环境
 
 - Node.js + npm
 - 项目依赖（`sharp`、`wrtc` 等）可能需要本地编译工具链
 
-## 4.2 系统依赖
+### 4.2 系统依赖
 
 - `ffmpeg`（需可在命令行直接执行）
 
-## 4.3 Python 推理环境
+### 4.3 Python 推理环境
 
 需要 Python 环境可运行以下依赖（按代码导入）：
 
@@ -199,13 +199,13 @@
 
 ## 5. 启动与开发
 
-## 5.1 安装依赖
+### 5.1 安装依赖
 
 ```bash
 npm install
 ```
 
-## 5.2 启动服务端
+### 5.2 启动服务端
 
 ```bash
 npm run start:server
@@ -213,20 +213,20 @@ npm run start:server
 
 默认端口由 `config/app.config.js` 的 `server.port` 决定（默认 3000）。
 
-## 5.3 Dashboard 前端开发
+### 5.3 Dashboard 前端开发
 
 ```bash
 npm run dev:frontend
 ```
 
-## 5.4 前端构建与预览
+### 5.4 前端构建与预览
 
 ```bash
 npm run build:frontend
 npm run preview:frontend
 ```
 
-## 5.5 前端静态检查
+### 5.5 前端静态检查
 
 ```bash
 npm run lint:frontend
