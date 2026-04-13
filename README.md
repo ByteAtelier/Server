@@ -1,4 +1,4 @@
-# ByteAtelier Server（中文详细版）
+# ByteAtelier Server 文档
 
 本项目是一个基于 Node.js 的实时视频处理与分发服务，核心能力是：
 
@@ -36,7 +36,7 @@
 - `config/app.config.js`
   - 全局运行参数中心：`server`、`media`、`webrtc`、`dashboard`、`source`；
   - Python 推理入口、模型路径、YOLO 参数在此配置；
-  - **当前端口来自该文件（`server.port`），不是环境变量读取。**
+  - **当前代码端口来自该文件（`server.port`）；若需环境变量端口，请自行扩展读取逻辑。**
 
 ### 2.2 总线层（事件缓冲）
 
