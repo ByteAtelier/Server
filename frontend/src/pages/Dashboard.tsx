@@ -83,6 +83,9 @@ interface TrendPoint {
   pythonSentFrames: number | null;
   pythonOutFrames: number | null;
   videoFrames: number;
+  esp32WindowRecvCount: number | null;
+  esp32WindowDropCount: number | null;
+  esp32WindowDropPct: number | null;
   modules: Record<string, ModuleStatePoint>;
 }
 
@@ -290,6 +293,9 @@ const Dashboard: React.FC = () => {
         toNumber(readPath(payload, [...pythonStatsBase, 'outFrames'])) ??
         toNumber(readPath(payload, [...pythonLegacyBase, 'outFrames'])),
       videoFrames: payload.video.totalFrames,
+      esp32WindowRecvCount: toNumber(readPath(payload, ['modules', 'source', 'windowRecvCount'])),
+      esp32WindowDropCount: toNumber(readPath(payload, ['modules', 'source', 'windowDropCount'])),
+      esp32WindowDropPct: toNumber(readPath(payload, ['modules', 'source', 'windowDropPct'])),
       modules: moduleStates,
     };
   };
@@ -305,6 +311,10 @@ const Dashboard: React.FC = () => {
   const rssBytes = toNumber(status?.process?.memory?.rss);
   const rssMb = latestTrendPoint?.rssMb ?? (rssBytes === null ? null : toMb(rssBytes));
   const connectedClients = toNumber(status?.server?.connectedClients);
+  const webrtcConnectionCount =
+    toNumber(readPath(status, ['modules', 'webrtc', 'socketConnectionCount'])) ??
+    toNumber(readPath(status, ['modules', 'webrtc', 'signalSocketCount'])) ??
+    (toBoolean(readPath(status, ['modules', 'webrtc', 'hasActivePeer'])) ? 1 : 0);
 
   const overwritten =
     toNumber(readPath(status, ['modules', 'pythonBridge', 'stats', 'overwritten'])) ??
@@ -401,6 +411,18 @@ const Dashboard: React.FC = () => {
         value: overwritten === null ? '--' : overwritten,
         valueStyle: metricValueStyle,
       },
+      {
+        key: 'broadcast-clients',
+        title: metricTitle('广播连接数'),
+        value: connectedClients === null ? '--' : connectedClients,
+        valueStyle: metricValueStyle,
+      },
+      {
+        key: 'webrtc-connections',
+        title: metricTitle('WebRTC 连接数'),
+        value: webrtcConnectionCount,
+        valueStyle: metricValueStyle,
+      }
     ];
   }, [
     pythonBridgeAlive,
@@ -619,6 +641,22 @@ const Dashboard: React.FC = () => {
     });
   }, [trendHistory]);
 
+  const packetLossTrendData = useMemo(() => {
+    return trendHistory.flatMap((point) => {
+      const rows: Array<{ time: string; value: number; series: string }> = [];
+      if (point.esp32WindowDropCount != null) {
+        rows.push({ time: formatTimeLabel(point.ts), value: point.esp32WindowDropCount, series: 'drop count' });
+      }
+      if (point.esp32WindowRecvCount != null) {
+        rows.push({ time: formatTimeLabel(point.ts), value: point.esp32WindowRecvCount, series: 'recv count' });
+      }
+      if (point.esp32WindowDropPct != null) {
+        rows.push({ time: formatTimeLabel(point.ts), value: point.esp32WindowDropPct, series: 'drop %' });
+      }
+      return rows;
+    });
+  }, [trendHistory]);
+
   const moduleHealthRows = useMemo<ModuleHealthRow[]>(() => {
     const latestPoint = trendHistory.length > 0 ? trendHistory[trendHistory.length - 1] : null;
     if (!latestPoint) {
@@ -694,16 +732,6 @@ const Dashboard: React.FC = () => {
         title: '最近1分钟抖动',
         dataIndex: 'flapping',
         key: 'flapping',
-      },
-      {
-        title: '重连次数',
-        dataIndex: 'reconnectCount',
-        key: 'reconnectCount',
-      },
-      {
-        title: '超时次数',
-        dataIndex: 'timeoutCount',
-        key: 'timeoutCount',
       },
     ];
   }, []);
@@ -850,7 +878,6 @@ const Dashboard: React.FC = () => {
           size="small"
           value={intervalMs}
           options={[
-            { label: '500ms', value: 500 },
             { label: '1s', value: 1000 },
             { label: '2s', value: 2000 },
           ]}
@@ -892,7 +919,7 @@ const Dashboard: React.FC = () => {
               </div>
             </ProCard>
 
-            <ProCard title="桥接状态" size="small" bordered className={styles.fillCard}>
+            <ProCard title="连接状态" size="small" bordered className={styles.fillCard}>
               <div className={styles.bridgeMetricGrid}>
                 {bridgeMetrics.map((metric) => (
                   <StatisticCard
@@ -995,9 +1022,25 @@ const Dashboard: React.FC = () => {
                 columns={moduleHealthColumns}
                 dataSource={moduleHealthRows}
                 pagination={false}
-                scroll={{ x: 680 }}
+                scroll={{ x: 260 }}
               />
             </ProCard>
+
+            <ProCard title="丢包诊断（最近1分钟）" size="small" bordered className={styles.fillCard}>
+              {packetLossTrendData.length > 0 ? (
+                <Line
+                  data={packetLossTrendData}
+                  xField="time"
+                  yField="value"
+                  colorField="series"
+                  scale={{ color: { range: DEMO_COLOR_RANGE_EXTENDED } }}
+                  height={360}
+                  animation={false}
+                />
+              ) : (
+                <Empty description="等待 ESP32 UDP 丢包数据" image={Empty.PRESENTED_IMAGE_SIMPLE} />
+              )}
+             </ProCard>
 
             <ProCard title="链路保真（最近1分钟差分）" size="small" bordered className={styles.fillCard}>
               {fidelityData.length > 0 ? (
@@ -1005,14 +1048,14 @@ const Dashboard: React.FC = () => {
                   data={fidelityData}
                   xField="stageLabel"
                   yField="value"
-                  height={320}
+                  height={360}
                   animation={false}
                   label={{
                     text: (datum: { value: number }) => `${datum.value}`,
                     textBaseline: 'bottom',
                   }}
                   style={{
-                    maxWidth: 36,
+                    maxWidth: 48,
                     radiusTopLeft: 8,
                     radiusTopRight: 8,
                   }}
