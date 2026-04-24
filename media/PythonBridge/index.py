@@ -14,7 +14,7 @@ import os
 import numpy as np
 
 from utils.utils import log
-from yoloSeg import YoloSegEngine
+from image_process.yoloSeg import YoloSegEngine
 
 W = 640  # 默认宽度 后被覆盖
 H = 480  # 默认高度 后被覆盖
