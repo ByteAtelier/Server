@@ -358,25 +358,25 @@ const Dashboard: React.FC = () => {
     latestTrendPoint?.rssMb ?? (rssBytes === null ? null : toMb(rssBytes));
   const connectedClients = toNumber(status?.server?.connectedClients);
   const webrtcConnectionCount =
-    toNumber(readPath(status, ["modules", "webrtc", "signalSocketCount"])) ??
+    toNumber(readPath(status, ['modules', 'webrtc', 'signalSocketCount'])) ??
     toNumber(
-      readPath(status, ["modules", "webrtc", "socketConnectionCount"]),
+      readPath(status, ['modules', 'webrtc', 'socketConnectionCount']),
     ) ??
-    (toBoolean(readPath(status, ["modules", "webrtc", "hasActivePeer"]))
+    (toBoolean(readPath(status, ['modules', 'webrtc', 'hasActivePeer']))
       ? 1
       : 0);
 
   const overwritten =
     toNumber(
-      readPath(status, ["modules", "pythonBridge", "stats", "overwritten"]),
+      readPath(status, ['modules', 'pythonBridge', 'stats', 'overwritten']),
     ) ??
     toNumber(
       readPath(status, [
-        "modules",
-        "mediaProcessor",
-        "pythonBridge",
-        "stats",
-        "overwritten",
+        'modules',
+        'mediaProcessor',
+        'pythonBridge',
+        'stats',
+        'overwritten',
       ]),
     );
   const pythonBridgeAlive =
@@ -499,12 +499,7 @@ const Dashboard: React.FC = () => {
         valueStyle: metricValueStyle,
       },
     ];
-  }, [
-    pythonBridgeAlive,
-    overwritten,
-    connectedClients,
-    webrtcConnectionCount,
-  ]);
+  }, [pythonBridgeAlive, overwritten, connectedClients, webrtcConnectionCount]);
 
   const runtimeSections = useMemo<RuntimeSection[]>(() => {
     if (!status) return [];
