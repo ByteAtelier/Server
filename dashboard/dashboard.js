@@ -122,12 +122,20 @@ function setupDashboard(io, {
 			? Number(eventLoopP99MsRaw.toFixed(2))
 			: null;
 		loopLagMonitor.reset();
+		const ingestBusStatus = typeof ingestBus?.getStatus === "function"
+			? ingestBus.getStatus()
+			: {};
+		const videoBusStatus = typeof videoBus?.getStatus === "function"
+			? videoBus.getStatus()
+			: {};
 		const modules = {
 			ingestBus: {
+				...ingestBusStatus,
 				alive: Boolean(ingestLastSeenAt && now - ingestLastSeenAt <= moduleAliveMs),
 				lastSeenAt: ingestLastSeenAt,
 			},
 			videoBus: {
+				...videoBusStatus,
 				alive: Boolean(videoLastSeenAt && now - videoLastSeenAt <= moduleAliveMs),
 				lastSeenAt: videoLastSeenAt,
 			},

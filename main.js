@@ -70,6 +70,8 @@ function main() {
         return {
           alive: s.alive,
           listening: s.listening,
+          connectedClients: s.connectedClients,
+          corsOrigin: s.corsOrigin,
         };
       },
       source: () => {
@@ -101,11 +103,21 @@ function main() {
             running: s.running,
             type: "esp32Udp",
             bound: s.bound,
+            host: s.host,
             port: s.port,
             codec: s.codec,
+            width: s.width,
+            height: s.height,
+            frameId: s.frameId,
             lastFrameId: s.lastFrameId,
-            recvStatCount: s.recvStatCount,
-            dropStatCount: s.dropStatCount,
+            windowRecvCount: s.windowRecvCount,
+            windowDropCount: s.windowDropCount,
+            windowFps: s.windowFps,
+            windowDropPct: s.windowDropPct,
+            windowTopDropReasons: s.windowTopDropReasons,
+            totalRecvCount: s.totalRecvCount,
+            totalDropCount: s.totalDropCount,
+            totalDropReasons: s.totalDropReasons,
           };
         }
 
@@ -141,6 +153,7 @@ function main() {
         const w = webrtcTransport.getStatus();
         return {
           alive: w.alive,
+          socketConnectionCount: w.socketConnectionCount,
           signalSocketCount: w.signalSocketCount,
           activeSocketId: w.activeSocketId,
           lastOfferAt: w.lastOfferAt,

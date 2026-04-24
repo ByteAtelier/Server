@@ -24,6 +24,12 @@ function createEsp32UdpSource(defaultOpts = {}) {
   let lastInlineLen = 0;
   let dropStatCount = 0;
   let dropReasons = Object.create(null);
+  let windowFps = 0;
+  let windowDropPct = 0;
+  let windowTopDropReasons = [];
+  let totalRecvCount = 0;
+  let totalDropCount = 0;
+  let totalDropReasons = Object.create(null);
 
   function writeStatusLine(line) {
     if (process.stdout.isTTY) {
@@ -63,6 +69,15 @@ function createEsp32UdpSource(defaultOpts = {}) {
     const fpsText = fps.toFixed(1);
     const dropPctText = dropPct.toFixed(1);
 
+    windowFps = Number(fps.toFixed(2));
+    windowDropPct = Number(dropPct.toFixed(2));
+    windowTopDropReasons = dropStatCount > 0
+      ? Object.entries(dropReasons)
+          .sort((a, b) => b[1] - a[1])
+          .slice(0, 2)
+          .map(([reason, count]) => ({ reason, count }))
+      : [];
+
     writeStatusLine(
       `[esp32UdpSource] id=${idText} recv=${recvText} fps=${fpsText} drop=${dropStatCount} drop%=${dropPctText} top=${reasonSummary}`
     );
@@ -78,6 +93,8 @@ function createEsp32UdpSource(defaultOpts = {}) {
     if (statWindowStart === 0) statWindowStart = now;
     dropStatCount++;
     dropReasons[reason] = (dropReasons[reason] || 0) + 1;
+    totalDropCount++;
+    totalDropReasons[reason] = (totalDropReasons[reason] || 0) + 1;
     flushStatus(now, false);
   }
 
@@ -113,7 +130,7 @@ function createEsp32UdpSource(defaultOpts = {}) {
 
     frameChannel.push({
       frameId: frame.id,
-      ts_src: frame.ts_firstPacket,  // 用首包时间戳
+      ts_src: Date.now(), // TODO: ESP 端修复为可信设备时间戳后，改回使用上报时间
       codec: opts.codec,
       width: opts.width,
       height: opts.height,
@@ -123,6 +140,7 @@ function createEsp32UdpSource(defaultOpts = {}) {
     const now = Date.now();
     if (statWindowStart === 0) statWindowStart = now;
     recvStatCount++;
+    totalRecvCount++;
     lastFrameId = frame.id;
 
     flushStatus(now, false);
@@ -257,6 +275,12 @@ function createEsp32UdpSource(defaultOpts = {}) {
     lastFrameId = -1;
     dropStatCount = 0;
     dropReasons = Object.create(null);
+    windowFps = 0;
+    windowDropPct = 0;
+    windowTopDropReasons = [];
+    totalRecvCount = 0;
+    totalDropCount = 0;
+    totalDropReasons = Object.create(null);
 
     if (process.stdout.isTTY && lastInlineLen > 0) {
       process.stdout.write("\r\n");
@@ -283,9 +307,16 @@ function createEsp32UdpSource(defaultOpts = {}) {
       codec: opts.codec,
       width: opts.width,
       height: opts.height,
+      frameId: lastFrameId >= 0 ? lastFrameId : null,
       lastFrameId,
-      recvStatCount,
-      dropStatCount,
+      windowRecvCount: recvStatCount,
+      windowDropCount: dropStatCount,
+      windowFps,
+      windowDropPct,
+      windowTopDropReasons,
+      totalRecvCount,
+      totalDropCount,
+      totalDropReasons,
     };
   }
 

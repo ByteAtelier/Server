@@ -22,6 +22,7 @@ module.exports = function setupWebRTCTransport(io, frameChannel, videoWidth, vid
   });
 
   let activeSocketId = null;
+  let socketConnectionCount = 0;
   let signalSocketCount = 0;
   let lastOfferAt = null;
   let lastConnectionState = "new";
@@ -29,7 +30,8 @@ module.exports = function setupWebRTCTransport(io, frameChannel, videoWidth, vid
 
   io.on("connection", (socket) => {
     console.log("\n[signal] connected", socket.id);
-    signalSocketCount += 1;
+    socketConnectionCount += 1;
+    let isSignalParticipant = false;
 
     let pc = null;
     let videoSource = null;
@@ -78,6 +80,10 @@ module.exports = function setupWebRTCTransport(io, frameChannel, videoWidth, vid
     };
 
     socket.on("webrtc:offer", async (offer) => {
+      if (!isSignalParticipant) {
+        isSignalParticipant = true;
+        signalSocketCount += 1;
+      }
       // 单客户端保护：仅对真正发起 WebRTC 的连接生效，避免误伤 dashboard/socket 连接
       if (singleClient && activeSocketId && activeSocketId !== socket.id) {
         const old = io.sockets.sockets.get(activeSocketId);
@@ -126,7 +132,10 @@ module.exports = function setupWebRTCTransport(io, frameChannel, videoWidth, vid
 
     socket.on("disconnect", () => {
       console.log("\n[signal] disconnected", socket.id);
-      signalSocketCount = Math.max(0, signalSocketCount - 1);
+      socketConnectionCount = Math.max(0, socketConnectionCount - 1);
+      if (isSignalParticipant) {
+        signalSocketCount = Math.max(0, signalSocketCount - 1);
+      }
       if (singleClient && activeSocketId === socket.id) activeSocketId = null;
       cleanup();
     });
@@ -136,6 +145,7 @@ module.exports = function setupWebRTCTransport(io, frameChannel, videoWidth, vid
     getStatus() {
       return {
         alive: true,
+        socketConnectionCount,
         signalSocketCount,
         activeSocketId,
         lastOfferAt,

@@ -276,7 +276,9 @@ const Dashboard: React.FC = () => {
       heapTotalMb: toMb(toNumber(readPath(payload, ['process', 'memory', 'heapTotal']))),
       cpuPercent: toNumber(readPath(payload, ['process', 'cpuPercent'])),
       eventLoopLagMean: toNumber(readPath(payload, ['process', 'eventLoopLagMs', 'meanMs'])),
-      sourceFrames: toNumber(readPath(payload, ['modules', 'source', 'frameId'])),
+      sourceFrames:
+        toNumber(readPath(payload, ['modules', 'source', 'frameId'])) ??
+        toNumber(readPath(payload, ['modules', 'source', 'lastFrameId'])),
       ingestFrames: payload.ingest.totalFrames,
       pythonInFrames:
         toNumber(readPath(payload, [...pythonStatsBase, 'inFrames'])) ??
