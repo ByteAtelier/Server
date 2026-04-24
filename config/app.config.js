@@ -1,7 +1,7 @@
 const path = require("path");
 
 const APP_CONFIG = {
-  server:{
+  server: {
     port: 3000,
   },
   media: {
@@ -10,9 +10,22 @@ const APP_CONFIG = {
     height: 480,
     pythonBridge: {
       pythonBin: "D:\\anaconda3\\envs\\yolo-cpu\\python.exe",
-      scriptPath: path.join(__dirname, "..", "media", "PythonBridge", "index.py"),
+      scriptPath: path.join(
+        __dirname,
+        "..",
+        "media",
+        "PythonBridge",
+        "index.py",
+      ),
       scriptArgs: {
-        model: path.join(__dirname, "..", "media", "PythonBridge", "weights", "tooth_seg_n_640.pt"),
+        model: path.join(
+          __dirname,
+          "..",
+          "media",
+          "PythonBridge",
+          "weights",
+          "tooth_seg_n_640.pt",
+        ),
         imgsz: 640,
         conf: 0.25,
         iou: 0.45,

@@ -16,9 +16,9 @@ import numpy as np
 from utils.utils import log
 from yoloSeg import YoloSegEngine
 
-W = 640 # 默认宽度 后被覆盖
-H = 480 # 默认高度 后被覆盖
-PAYLOAD_LEN = W * H * 3 # 默认 payload 长度 后被覆盖
+W = 640  # 默认宽度 后被覆盖
+H = 480  # 默认高度 后被覆盖
+PAYLOAD_LEN = W * H * 3  # 默认 payload 长度 后被覆盖
 
 # struct 格式码说明
 # - I：unsigned int（4 字节，无符号 32 位 / u32）
@@ -26,6 +26,7 @@ PAYLOAD_LEN = W * H * 3 # 默认 payload 长度 后被覆盖
 # - "<"：小端序（little-endian）
 HDR_FMT = "<IQ"  # u32 frameId, u64 tsMs (LE)
 HDR_SIZE = struct.calcsize(HDR_FMT)  # 12
+
 
 def read_exact(n: int) -> bytes:
     buf = bytearray()
@@ -37,15 +38,23 @@ def read_exact(n: int) -> bytes:
         buf += chunk
     return bytes(buf)
 
+
 def write_all(b: bytes) -> None:
     sys.stdout.buffer.write(b)
     sys.stdout.buffer.flush()
+
 
 def parse_args():
     p = argparse.ArgumentParser()
     p.add_argument("--w", type=int, required=True)
     p.add_argument("--h", type=int, required=True)
-    p.add_argument("--model", type=str, default=os.path.join(os.path.dirname(__file__), "weights", "tooth_seg_n_640.pt"))
+    p.add_argument(
+        "--model",
+        type=str,
+        default=os.path.join(
+            os.path.dirname(__file__), "weights", "tooth_seg_n_640.pt"
+        ),
+    )
     p.add_argument("--imgsz", type=int, default=640)
     p.add_argument("--conf", type=float, default=0.25)
     p.add_argument("--iou", type=float, default=0.45)
@@ -53,6 +62,7 @@ def parse_args():
     p.add_argument("--device", type=str, default=None)
     p.add_argument("--mask-alpha", type=float, default=0.45)
     return p.parse_args()
+
 
 def main():
     args = parse_args()
@@ -85,11 +95,13 @@ def main():
         out_hdr = struct.pack(HDR_FMT, frame_id, ts_ms)
         write_all(out_hdr + out_payload)
 
+
 if __name__ == "__main__":
     try:
         main()
     except Exception as e:
         import traceback
+
         log(f"FATAL: {e}")
         traceback.print_exc(file=sys.stderr)
         sys.stderr.flush()

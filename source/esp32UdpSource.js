@@ -71,15 +71,16 @@ function createEsp32UdpSource(defaultOpts = {}) {
 
     windowFps = Number(fps.toFixed(2));
     windowDropPct = Number(dropPct.toFixed(2));
-    windowTopDropReasons = dropStatCount > 0
-      ? Object.entries(dropReasons)
-          .sort((a, b) => b[1] - a[1])
-          .slice(0, 2)
-          .map(([reason, count]) => ({ reason, count }))
-      : [];
+    windowTopDropReasons =
+      dropStatCount > 0
+        ? Object.entries(dropReasons)
+            .sort((a, b) => b[1] - a[1])
+            .slice(0, 2)
+            .map(([reason, count]) => ({ reason, count }))
+        : [];
 
     writeStatusLine(
-      `[esp32UdpSource] id=${idText} recv=${recvText} fps=${fpsText} drop=${dropStatCount} drop%=${dropPctText} top=${reasonSummary}`
+      `[esp32UdpSource] id=${idText} recv=${recvText} fps=${fpsText} drop=${dropStatCount} drop%=${dropPctText} top=${reasonSummary}`,
     );
 
     statWindowStart = now;
@@ -99,11 +100,10 @@ function createEsp32UdpSource(defaultOpts = {}) {
   }
 
   // 最多两帧
-  let cur = null;   // 最新帧
-  let prev = null;  // 上一帧
+  let cur = null; // 最新帧
+  let prev = null; // 上一帧
 
   function newFrame(id, total, ts_src) {
-
     return {
       id,
       total,
@@ -159,7 +159,7 @@ function createEsp32UdpSource(defaultOpts = {}) {
     const dataLen = msg.readUInt16LE(12);
     const _ = msg.readUInt16LE(14); // 内存对齐
 
-    // ========== 基本校验 ==========    
+    // ========== 基本校验 ==========
     if (total === 0) {
       recordDrop("pkt:total_zero");
       return;
@@ -178,10 +178,7 @@ function createEsp32UdpSource(defaultOpts = {}) {
       return;
     }
 
-    const payload = msg.subarray(
-      opts.headerBytes,
-      opts.headerBytes + dataLen
-    );
+    const payload = msg.subarray(opts.headerBytes, opts.headerBytes + dataLen);
 
     // ========== 帧路由 ==========
     let frame = null;
@@ -258,7 +255,7 @@ function createEsp32UdpSource(defaultOpts = {}) {
       running = true;
       const addr = socket.address();
       console.log(
-        `[esp32UdpSource] Listening udp://${addr.address}:${addr.port} (${opts.width}x${opts.height}, codec=${opts.codec})`
+        `[esp32UdpSource] Listening udp://${addr.address}:${addr.port} (${opts.width}x${opts.height}, codec=${opts.codec})`,
       );
     });
   }

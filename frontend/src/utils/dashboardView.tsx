@@ -64,7 +64,12 @@ export function splitStatusModules(
   const result: Array<{ moduleName: string; moduleData: unknown }> = [];
 
   Object.entries(modules).forEach(([moduleName, moduleData]) => {
-    if (moduleName !== 'mediaProcessor' || !moduleData || typeof moduleData !== 'object' || Array.isArray(moduleData)) {
+    if (
+      moduleName !== 'mediaProcessor' ||
+      !moduleData ||
+      typeof moduleData !== 'object' ||
+      Array.isArray(moduleData)
+    ) {
       result.push({ moduleName, moduleData });
       return;
     }
@@ -89,7 +94,9 @@ export function stripLeadingPrefix(label: string, prefix: string): string {
   return label;
 }
 
-export function buildDescriptionSchema(entries: SemanticEntry[]): DescriptionSchema {
+export function buildDescriptionSchema(
+  entries: SemanticEntry[],
+): DescriptionSchema {
   const dataSource: Record<string, string> = {};
   const columns: DescriptionSchema['columns'] = entries.map((entry, index) => {
     const fieldKey = `f_${index}`;
@@ -135,7 +142,13 @@ export function renderSemanticCard(
   const schema = buildDescriptionSchema(directFields);
 
   return (
-    <ProCard size="small" title={hideTitle ? undefined : title} bordered style={{ marginBottom: 8 }} key={parentKey + title}>
+    <ProCard
+      size="small"
+      title={hideTitle ? undefined : title}
+      bordered
+      style={{ marginBottom: 8 }}
+      key={parentKey + title}
+    >
       {directFields.length > 0 && (
         <ProDescriptions
           size="small"
@@ -146,7 +159,11 @@ export function renderSemanticCard(
       )}
       {Object.entries(nestedGroups).map(([group, groupEntries]) => (
         <div key={group} style={{ marginTop: 8, marginLeft: 8 }}>
-          {renderSemanticCard(group, groupEntries, `${parentKey + title}/${group}`)}
+          {renderSemanticCard(
+            group,
+            groupEntries,
+            `${parentKey + title}/${group}`,
+          )}
         </div>
       ))}
     </ProCard>

@@ -1,12 +1,16 @@
 {
   "scripts": {
     "start:server": "node main.js",
+    "fmt:server": "prettier --write **/*.js",
+    "fmt:python": "black .",
     "dev:frontend": "cd frontend && max dev",
     "build:frontend": "cd frontend && max build",
     "preview:frontend": "cd frontend && max preview --port 8000",
     "biome:frontend": "biome lint frontend",
     "tsc:frontend": "tsc --noEmit -p tsconfig.json",
-    "lint:frontend": "npm run biome:frontend && npm run tsc:frontend"
+    "lint:frontend": "npm run biome:frontend && npm run tsc:frontend",
+    "fmt:frontend": "biome format frontend --write",
+    "fmt": "npm run fmt:server && npm run fmt:python && npm run fmt:frontend"
   },
   "dependencies": {
     "@ant-design/plots": "^2.6.8",

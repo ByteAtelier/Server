@@ -8,14 +8,15 @@ class FfmpegCodec {
     this.onLog = onLog || (() => {});
     if (!["jpegToBgr", "bgrToI420"].includes(mode)) {
       throw new Error(
-        `[FfmpegCodec] Invalid mode: ${mode}. Supported modes are "jpegToBgr" and "bgrToI420".`
+        `[FfmpegCodec] Invalid mode: ${mode}. Supported modes are "jpegToBgr" and "bgrToI420".`,
       );
     }
     this.mode = mode;
 
-    this.frameSize = this.mode === "jpegToBgr"
-      ? width * height * 3
-      : (width * height * 3) >> 1;
+    this.frameSize =
+      this.mode === "jpegToBgr"
+        ? width * height * 3
+        : (width * height * 3) >> 1;
     this._chunks = []; // stdout chunk 队列
     this._chunksBytes = 0; // 队列总字节数
     this._headOffset = 0; // 队首 chunk 已消费偏移
@@ -32,7 +33,9 @@ class FfmpegCodec {
   start() {
     if (this._proc) return;
 
-    this.onLog(`[FfmpegCodec] Starting ffmpeg for ${this.width}x${this.height} with mode=${this.mode}`);
+    this.onLog(
+      `[FfmpegCodec] Starting ffmpeg for ${this.width}x${this.height} with mode=${this.mode}`,
+    );
 
     const isJpegToBgr = this.mode === "jpegToBgr";
     const inputCodec = isJpegToBgr ? "mjpeg" : "rawvideo";
@@ -81,17 +84,25 @@ class FfmpegCodec {
 
     this._proc = spawn("ffmpeg", args, { stdio: ["pipe", "pipe", "pipe"] });
 
-    this.onLog(`[FfmpegCodec] ffmpeg started with PID=${this._proc.pid} mode=${this.mode} args=${args.join(" ")}`);
+    this.onLog(
+      `[FfmpegCodec] ffmpeg started with PID=${this._proc.pid} mode=${this.mode} args=${args.join(" ")}`,
+    );
 
     this._proc.stdout.on("data", (chunk) => this._handleStdout(chunk));
-    this._proc.stderr.on("data", (d) => this.onLog(`\n[FfmpegCodec] ffmpeg mode=${this.mode} stderr: ${d.toString()}`));
+    this._proc.stderr.on("data", (d) =>
+      this.onLog(
+        `\n[FfmpegCodec] ffmpeg mode=${this.mode} stderr: ${d.toString()}`,
+      ),
+    );
 
     this._proc.stdin.on("drain", () => {
       this._stdinBusy = false;
     });
 
     this._proc.on("close", (code, signal) => {
-      this.onLog(`[FfmpegCodec] ffmpeg exited code=${code} signal=${signal} mode=${this.mode}`);
+      this.onLog(
+        `[FfmpegCodec] ffmpeg exited code=${code} signal=${signal} mode=${this.mode}`,
+      );
       this._proc = null;
       this._resetParser();
       if (!this._closed) this.start();
@@ -143,7 +154,7 @@ class FfmpegCodec {
     if (this._chunksBytes > this.MAX_QUEUE_BYTES) {
       const dropBytes =
         Math.floor(
-          (this._chunksBytes - this.MAX_QUEUE_BYTES) / this.frameSize
+          (this._chunksBytes - this.MAX_QUEUE_BYTES) / this.frameSize,
         ) * this.frameSize;
 
       if (dropBytes > 0) {
@@ -165,7 +176,7 @@ class FfmpegCodec {
           this._frameBuf,
           dstOff,
           this._headOffset,
-          this._headOffset + take
+          this._headOffset + take,
         );
 
         dstOff += take;

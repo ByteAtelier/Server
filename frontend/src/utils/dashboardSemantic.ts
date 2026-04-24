@@ -117,7 +117,15 @@ const BOOL_TEXT_MAP: Record<string, { yes: string; no: string }> = {
 };
 
 const BYTE_KEYS = new Set(['rss', 'heapTotal', 'heapUsed', 'external']);
-const TIME_KEYS = new Set(['ts', 'lastSeenAt', 'startedAt', 'lastTsSrc', 'lastOfferAt', 'lastFrameAt', 'timestamp']);
+const TIME_KEYS = new Set([
+  'ts',
+  'lastSeenAt',
+  'startedAt',
+  'lastTsSrc',
+  'lastOfferAt',
+  'lastFrameAt',
+  'timestamp',
+]);
 
 function prettySegment(segment: string): string {
   return NAME_MAP[segment] ?? segment;
@@ -154,7 +162,13 @@ function formatByKey(key: string, value: unknown): string {
     if (key === 'cpuPercent') {
       return `${value.toFixed(2)} %`;
     }
-    if (key === 'latestMs' || key === 'averageMs' || key === 'p95Ms' || key === 'p99Ms' || key === 'meanMs') {
+    if (
+      key === 'latestMs' ||
+      key === 'averageMs' ||
+      key === 'p95Ms' ||
+      key === 'p99Ms' ||
+      key === 'meanMs'
+    ) {
       return `${value.toFixed(2)} ms`;
     }
     if (BYTE_KEYS.has(key)) {
@@ -163,7 +177,10 @@ function formatByKey(key: string, value: unknown): string {
     }
     if (key === 'uptimeMs' || key === 'uptimeSec') {
       // 优先用 ms，若大于1h则 h m s，否则 m s
-      const totalSec = Math.max(0, Math.floor(key === 'uptimeMs' ? value / 1000 : value));
+      const totalSec = Math.max(
+        0,
+        Math.floor(key === 'uptimeMs' ? value / 1000 : value),
+      );
       const h = Math.floor(totalSec / 3600);
       const m = Math.floor((totalSec % 3600) / 60);
       const s = totalSec % 60;
@@ -190,13 +207,22 @@ function formatByKey(key: string, value: unknown): string {
   }
 
   if (Array.isArray(value) && value.length === 0) return '[]';
-  if (typeof value === 'object' && value && Object.keys(value).length === 0) return '{}';
+  if (typeof value === 'object' && value && Object.keys(value).length === 0)
+    return '{}';
 
   return JSON.stringify(value);
 }
 
-export function flattenSemanticEntries(value: unknown, path = ''): SemanticEntry[] {
-  if (value === null || typeof value === 'boolean' || typeof value === 'number' || typeof value === 'string') {
+export function flattenSemanticEntries(
+  value: unknown,
+  path = '',
+): SemanticEntry[] {
+  if (
+    value === null ||
+    typeof value === 'boolean' ||
+    typeof value === 'number' ||
+    typeof value === 'string'
+  ) {
     const safePath = normalizePath(path || 'value');
     const key = splitPath(safePath).slice(-1)[0] ?? safePath;
     return [
@@ -232,10 +258,14 @@ export function flattenSemanticEntries(value: unknown, path = ''): SemanticEntry
 }
 
 export function sourceConfigForDisplay(config: unknown): unknown {
-  if (!config || typeof config !== 'object' || Array.isArray(config)) return config;
+  if (!config || typeof config !== 'object' || Array.isArray(config))
+    return config;
 
   const source = config as Record<string, unknown>;
-  const sourceType = source.type === 'imageLoop' || source.type === 'esp32Udp' ? source.type : null;
+  const sourceType =
+    source.type === 'imageLoop' || source.type === 'esp32Udp'
+      ? source.type
+      : null;
   if (!sourceType) return source;
 
   const result: Record<string, unknown> = { type: source.type };
@@ -255,18 +285,29 @@ export function statusSectionTitle(sectionName: string): string {
   return prettySegment(sectionName);
 }
 
-export function configModuleEntries(moduleName: string, moduleConfig: unknown): SemanticEntry[] {
+export function configModuleEntries(
+  moduleName: string,
+  moduleConfig: unknown,
+): SemanticEntry[] {
   if (moduleName === 'source') {
-    return flattenSemanticEntries(sourceConfigForDisplay(moduleConfig), 'source');
+    return flattenSemanticEntries(
+      sourceConfigForDisplay(moduleConfig),
+      'source',
+    );
   }
   return flattenSemanticEntries(moduleConfig, moduleName);
 }
 
-export function statusSectionEntries(sectionName: string, sectionValue: unknown): SemanticEntry[] {
+export function statusSectionEntries(
+  sectionName: string,
+  sectionValue: unknown,
+): SemanticEntry[] {
   return flattenSemanticEntries(sectionValue, sectionName);
 }
 
-export function configModuleMap(config: DashboardConfig): Array<{ moduleName: string; entries: SemanticEntry[] }> {
+export function configModuleMap(
+  config: DashboardConfig,
+): Array<{ moduleName: string; entries: SemanticEntry[] }> {
   return Object.entries(config).map(([moduleName, moduleConfig]) => ({
     moduleName,
     entries: configModuleEntries(moduleName, moduleConfig),

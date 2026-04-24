@@ -70,7 +70,15 @@ class PythonBridge {
   start() {
     if (this._proc) return;
 
-    const args = ["-u", this.scriptPath, "--w", String(this.width), "--h", String(this.height), ...this._buildScriptArgs()];
+    const args = [
+      "-u",
+      this.scriptPath,
+      "--w",
+      String(this.width),
+      "--h",
+      String(this.height),
+      ...this._buildScriptArgs(),
+    ];
     const p = spawn(this.pythonBin, args, { stdio: ["pipe", "pipe", "pipe"] });
 
     this._proc = p;
@@ -80,7 +88,7 @@ class PythonBridge {
     this._lastExit = null;
 
     this.onLog(
-      `[PythonBridge] start pythonBin=${this.pythonBin} scriptPath=${this.scriptPath} w=${this.width} h=${this.height} args=${JSON.stringify(this.scriptArgs)}`
+      `[PythonBridge] start pythonBin=${this.pythonBin} scriptPath=${this.scriptPath} w=${this.width} h=${this.height} args=${JSON.stringify(this.scriptArgs)}`,
     );
 
     p.on("error", (err) => {
@@ -155,7 +163,7 @@ class PythonBridge {
   }
 
   /**
-  * pushFrame：推入一帧 BGR24
+   * pushFrame：推入一帧 BGR24
    * - 上游>Python：覆盖 mailbox（丢上游帧），不排队、不积压
    * - Python 为节拍：严格 1 in-flight
    *
@@ -165,7 +173,9 @@ class PythonBridge {
     this.stats.inFrames++;
 
     if (!this.isAlive()) {
-      throw new Error("[PythonBridge] pushFrame called but python process is not alive");
+      throw new Error(
+        "[PythonBridge] pushFrame called but python process is not alive",
+      );
     }
 
     // 最小 framing 断言：不允许写坏协议流
@@ -174,7 +184,7 @@ class PythonBridge {
     }
     if (frameBuf.length !== this._payloadLen) {
       throw new RangeError(
-        `[PythonBridge] bad frameBuf length=${frameBuf.length}, expected=${this._payloadLen}`
+        `[PythonBridge] bad frameBuf length=${frameBuf.length}, expected=${this._payloadLen}`,
       );
     }
 

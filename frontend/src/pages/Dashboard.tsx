@@ -151,11 +151,18 @@ function toMb(bytes: number | null): number {
 function percentile(samples: number[], ratio: number): number | null {
   if (samples.length === 0) return null;
   const sorted = [...samples].sort((left, right) => left - right);
-  const index = Math.min(sorted.length - 1, Math.max(0, Math.ceil(sorted.length * ratio) - 1));
+  const index = Math.min(
+    sorted.length - 1,
+    Math.max(0, Math.ceil(sorted.length * ratio) - 1),
+  );
   return Number(sorted[index].toFixed(2));
 }
 
-function calcLatencyStats(samples: number[]): { average: number | null; p95: number | null; p99: number | null } {
+function calcLatencyStats(samples: number[]): {
+  average: number | null;
+  p95: number | null;
+  p99: number | null;
+} {
   if (samples.length === 0) {
     return {
       average: null,
@@ -182,14 +189,21 @@ const DEMO_COLOR_RANGE = ['#30BF78', '#F4664A', '#FAAD14'];
 const DEMO_COLOR_RANGE_EXTENDED = ['#30BF78', '#F4664A', '#FAAD14', '#5B8FF9'];
 const DEMO_COLOR_RANGE_RUNTIME = ['#30BF78', '#F4664A'];
 
-function moduleStatusTag(moduleData: unknown): { text: string; color: 'default' | 'success' | 'error' } {
+function moduleStatusTag(moduleData: unknown): {
+  text: string;
+  color: 'default' | 'success' | 'error';
+} {
   const alive = toBoolean(readPath(moduleData, ['alive']));
   if (alive === true) return { text: '正常', color: 'success' };
   if (alive === false) return { text: '离线', color: 'error' };
   return { text: '未知', color: 'default' };
 }
 
-function metricTitle(text: string, tagText?: string, tagColor?: string): React.ReactNode {
+function metricTitle(
+  text: string,
+  tagText?: string,
+  tagColor?: string,
+): React.ReactNode {
   return (
     <div className={styles.wrapInline}>
       <Typography.Text className={styles.wrapText}>{text}</Typography.Text>
@@ -200,12 +214,15 @@ function metricTitle(text: string, tagText?: string, tagColor?: string): React.R
 
 function moduleSummary(moduleName: string, moduleData: unknown): string {
   if (moduleName === 'pythonBridge') {
-    const overwritten = toNumber(readPath(moduleData, ['stats', 'overwritten']));
+    const overwritten = toNumber(
+      readPath(moduleData, ['stats', 'overwritten']),
+    );
     return `覆盖帧：${overwritten === null ? '-' : overwritten}`;
   }
 
   if (moduleName === 'webrtc') {
-    const state = toStringValue(readPath(moduleData, ['lastConnectionState'])) ?? 'unknown';
+    const state =
+      toStringValue(readPath(moduleData, ['lastConnectionState'])) ?? 'unknown';
     return `连接状态：${state}`;
   }
 
@@ -231,7 +248,9 @@ const Dashboard: React.FC = () => {
   const [trendHistory, setTrendHistory] = useState<TrendPoint[]>([]);
   const [autoRefresh, setAutoRefresh] = useState(true);
   const [intervalMs, setIntervalMs] = useState(1000);
-  const [activeModule, setActiveModule] = useState<ActiveModuleDetail | null>(null);
+  const [activeModule, setActiveModule] = useState<ActiveModuleDetail | null>(
+    null,
+  );
   const [drawerTab, setDrawerTab] = useState<DrawerTabKey>('overview');
 
   const buildTrendPoint = (
@@ -239,22 +258,31 @@ const Dashboard: React.FC = () => {
     history: TrendPoint[],
   ): TrendPoint => {
     const moduleStates: Record<string, ModuleStatePoint> = {};
-    splitStatusModules(payload.modules).forEach(({ moduleName, moduleData }) => {
-      const alive = toBoolean(readPath(moduleData, ['alive']));
-      const lastSeenAt =
-        toNumber(readPath(moduleData, ['lastSeenAt'])) ??
-        toNumber(readPath(moduleData, ['lastOfferAt'])) ??
-        toNumber(readPath(moduleData, ['startedAt'])) ??
-        null;
-      moduleStates[moduleName] = {
-        alive: alive === true,
-        lastSeenAt,
-      };
-    });
+    splitStatusModules(payload.modules).forEach(
+      ({ moduleName, moduleData }) => {
+        const alive = toBoolean(readPath(moduleData, ['alive']));
+        const lastSeenAt =
+          toNumber(readPath(moduleData, ['lastSeenAt'])) ??
+          toNumber(readPath(moduleData, ['lastOfferAt'])) ??
+          toNumber(readPath(moduleData, ['startedAt'])) ??
+          null;
+        moduleStates[moduleName] = {
+          alive: alive === true,
+          lastSeenAt,
+        };
+      },
+    );
 
     const pythonStatsBase = ['modules', 'pythonBridge', 'stats'] as const;
-    const pythonLegacyBase = ['modules', 'mediaProcessor', 'pythonBridge', 'stats'] as const;
-    const latencyLatest = toNumber(readPath(payload, ['video', 'latencyMs', 'latestMs']));
+    const pythonLegacyBase = [
+      'modules',
+      'mediaProcessor',
+      'pythonBridge',
+      'stats',
+    ] as const;
+    const latencyLatest = toNumber(
+      readPath(payload, ['video', 'latencyMs', 'latestMs']),
+    );
     const latencySamples = history
       .filter((point) => point.ts >= payload.ts - TREND_WINDOW_MS)
       .map((point) => point.latencyLatest)
@@ -275,10 +303,16 @@ const Dashboard: React.FC = () => {
       latencyP95: latencyStats.p95,
       latencyP99: latencyStats.p99,
       rssMb: toMb(toNumber(readPath(payload, ['process', 'memory', 'rss']))),
-      heapUsedMb: toMb(toNumber(readPath(payload, ['process', 'memory', 'heapUsed']))),
-      heapTotalMb: toMb(toNumber(readPath(payload, ['process', 'memory', 'heapTotal']))),
+      heapUsedMb: toMb(
+        toNumber(readPath(payload, ['process', 'memory', 'heapUsed'])),
+      ),
+      heapTotalMb: toMb(
+        toNumber(readPath(payload, ['process', 'memory', 'heapTotal'])),
+      ),
       cpuPercent: toNumber(readPath(payload, ['process', 'cpuPercent'])),
-      eventLoopLagMean: toNumber(readPath(payload, ['process', 'eventLoopLagMs', 'meanMs'])),
+      eventLoopLagMean: toNumber(
+        readPath(payload, ['process', 'eventLoopLagMs', 'meanMs']),
+      ),
       sourceFrames:
         toNumber(readPath(payload, ['modules', 'source', 'frameId'])) ??
         toNumber(readPath(payload, ['modules', 'source', 'lastFrameId'])),
@@ -293,9 +327,15 @@ const Dashboard: React.FC = () => {
         toNumber(readPath(payload, [...pythonStatsBase, 'outFrames'])) ??
         toNumber(readPath(payload, [...pythonLegacyBase, 'outFrames'])),
       videoFrames: payload.video.totalFrames,
-      esp32WindowRecvCount: toNumber(readPath(payload, ['modules', 'source', 'windowRecvCount'])),
-      esp32WindowDropCount: toNumber(readPath(payload, ['modules', 'source', 'windowDropCount'])),
-      esp32WindowDropPct: toNumber(readPath(payload, ['modules', 'source', 'windowDropPct'])),
+      esp32WindowRecvCount: toNumber(
+        readPath(payload, ['modules', 'source', 'windowRecvCount']),
+      ),
+      esp32WindowDropCount: toNumber(
+        readPath(payload, ['modules', 'source', 'windowDropCount']),
+      ),
+      esp32WindowDropPct: toNumber(
+        readPath(payload, ['modules', 'source', 'windowDropPct']),
+      ),
       modules: moduleStates,
     };
   };
@@ -304,24 +344,46 @@ const Dashboard: React.FC = () => {
 
   const ingestFps = toNumber(status?.ingest?.fps);
   const videoFps = toNumber(status?.video?.fps);
-  const latestTrendPoint = trendHistory.length > 0 ? trendHistory[trendHistory.length - 1] : null;
-  const avgLatencyMs = latestTrendPoint?.latencyAverage ?? toNumber(status?.video?.latencyMs?.latestMs);
-  const p95LatencyMs = latestTrendPoint?.latencyP95 ?? toNumber(status?.video?.latencyMs?.p95Ms);
-  const cpuPercent = latestTrendPoint?.cpuPercent ?? toNumber(status?.process?.cpuPercent);
+  const latestTrendPoint =
+    trendHistory.length > 0 ? trendHistory[trendHistory.length - 1] : null;
+  const avgLatencyMs =
+    latestTrendPoint?.latencyAverage ??
+    toNumber(status?.video?.latencyMs?.latestMs);
+  const p95LatencyMs =
+    latestTrendPoint?.latencyP95 ?? toNumber(status?.video?.latencyMs?.p95Ms);
+  const cpuPercent =
+    latestTrendPoint?.cpuPercent ?? toNumber(status?.process?.cpuPercent);
   const rssBytes = toNumber(status?.process?.memory?.rss);
-  const rssMb = latestTrendPoint?.rssMb ?? (rssBytes === null ? null : toMb(rssBytes));
+  const rssMb =
+    latestTrendPoint?.rssMb ?? (rssBytes === null ? null : toMb(rssBytes));
   const connectedClients = toNumber(status?.server?.connectedClients);
   const webrtcConnectionCount =
-    toNumber(readPath(status, ['modules', 'webrtc', 'socketConnectionCount'])) ??
+    toNumber(
+      readPath(status, ['modules', 'webrtc', 'socketConnectionCount']),
+    ) ??
     toNumber(readPath(status, ['modules', 'webrtc', 'signalSocketCount'])) ??
-    (toBoolean(readPath(status, ['modules', 'webrtc', 'hasActivePeer'])) ? 1 : 0);
+    (toBoolean(readPath(status, ['modules', 'webrtc', 'hasActivePeer']))
+      ? 1
+      : 0);
 
   const overwritten =
-    toNumber(readPath(status, ['modules', 'pythonBridge', 'stats', 'overwritten'])) ??
-    toNumber(readPath(status, ['modules', 'mediaProcessor', 'pythonBridge', 'stats', 'overwritten']));
+    toNumber(
+      readPath(status, ['modules', 'pythonBridge', 'stats', 'overwritten']),
+    ) ??
+    toNumber(
+      readPath(status, [
+        'modules',
+        'mediaProcessor',
+        'pythonBridge',
+        'stats',
+        'overwritten',
+      ]),
+    );
   const pythonBridgeAlive =
     toBoolean(readPath(status, ['modules', 'pythonBridge', 'alive'])) ??
-    toBoolean(readPath(status, ['modules', 'mediaProcessor', 'pythonBridge', 'alive'])) ??
+    toBoolean(
+      readPath(status, ['modules', 'mediaProcessor', 'pythonBridge', 'alive']),
+    ) ??
     toBoolean(readPath(status, ['modules', 'mediaProcessor', 'alive']));
 
   const sourceType = toStringValue(readPath(config, ['source', 'type']));
@@ -332,7 +394,11 @@ const Dashboard: React.FC = () => {
   const pipelineMetrics = useMemo<MetricCardItem[]>(() => {
     const ingestMetric: MetricCardItem = {
       key: 'ingest-fps',
-      title: metricTitle('输入 FPS', ingestFpsLevel.label, ingestFpsLevel.tagColor),
+      title: metricTitle(
+        '输入 FPS',
+        ingestFpsLevel.label,
+        ingestFpsLevel.tagColor,
+      ),
       value: ingestFps === null ? '--' : Number(ingestFps.toFixed(2)),
       suffix: 'FPS',
       valueStyle: ingestFpsLevel.valueColor
@@ -342,7 +408,11 @@ const Dashboard: React.FC = () => {
 
     const videoMetric: MetricCardItem = {
       key: 'video-fps',
-      title: metricTitle('输出 FPS', videoFpsLevel.label, videoFpsLevel.tagColor),
+      title: metricTitle(
+        '输出 FPS',
+        videoFpsLevel.label,
+        videoFpsLevel.tagColor,
+      ),
       value: videoFps === null ? '--' : Number(videoFps.toFixed(2)),
       suffix: 'FPS',
       valueStyle: videoFpsLevel.valueColor
@@ -402,7 +472,12 @@ const Dashboard: React.FC = () => {
       {
         key: 'python-bridge',
         title: metricTitle('PythonBridge'),
-        value: pythonBridgeAlive === null ? '未知' : pythonBridgeAlive ? '存活' : '离线',
+        value:
+          pythonBridgeAlive === null
+            ? '未知'
+            : pythonBridgeAlive
+              ? '存活'
+              : '离线',
         valueStyle: metricValueStyle,
       },
       {
@@ -422,12 +497,9 @@ const Dashboard: React.FC = () => {
         title: metricTitle('WebRTC 连接数'),
         value: webrtcConnectionCount,
         valueStyle: metricValueStyle,
-      }
+      },
     ];
-  }, [
-    pythonBridgeAlive,
-    overwritten,
-  ]);
+  }, [pythonBridgeAlive, overwritten]);
 
   const runtimeSections = useMemo<RuntimeSection[]>(() => {
     if (!status) return [];
@@ -452,10 +524,12 @@ const Dashboard: React.FC = () => {
       })
       .map(([sectionName, sectionValue]) => {
         const title = statusSectionTitle(sectionName);
-        const entries = statusSectionEntries(sectionName, sectionValue).map((item) => ({
-          ...item,
-          label: stripLeadingPrefix(item.label, title),
-        }));
+        const entries = statusSectionEntries(sectionName, sectionValue).map(
+          (item) => ({
+            ...item,
+            label: stripLeadingPrefix(item.label, title),
+          }),
+        );
         return {
           sectionName,
           title,
@@ -506,7 +580,10 @@ const Dashboard: React.FC = () => {
     if (!activeModule) return [];
 
     const title = moduleTitle(activeModule.moduleName);
-    return flattenSemanticEntries(activeModule.moduleData, activeModule.moduleName).map((item) => ({
+    return flattenSemanticEntries(
+      activeModule.moduleData,
+      activeModule.moduleName,
+    ).map((item) => ({
       ...item,
       label: stripLeadingPrefix(item.label, title),
     }));
@@ -514,7 +591,9 @@ const Dashboard: React.FC = () => {
 
   const activeOverviewEntries = useMemo(() => {
     return activeModuleEntries.filter((item) => {
-      return !item.keyPath.includes('.stats.') && !item.keyPath.endsWith('.stats');
+      return (
+        !item.keyPath.includes('.stats.') && !item.keyPath.endsWith('.stats')
+      );
     });
   }, [activeModuleEntries]);
 
@@ -547,7 +626,11 @@ const Dashboard: React.FC = () => {
     if (!activeModule) return [];
 
     const statsValue = readPath(activeModule.moduleData, ['stats']);
-    if (!statsValue || typeof statsValue !== 'object' || Array.isArray(statsValue)) {
+    if (
+      !statsValue ||
+      typeof statsValue !== 'object' ||
+      Array.isArray(statsValue)
+    ) {
       return [];
     }
 
@@ -564,17 +647,33 @@ const Dashboard: React.FC = () => {
   const activeStatsSchema = useMemo(() => {
     if (!activeModule) return null;
 
-    const numericFieldCount = activeModuleEntries.filter((entry) => /^[-+]?\d+(\.\d+)?$/.test(entry.value)).length;
-    const boolLikeFieldCount = activeModuleEntries.filter((entry) => /(√|×|是|否)$/.test(entry.value)).length;
+    const numericFieldCount = activeModuleEntries.filter((entry) =>
+      /^[-+]?\d+(\.\d+)?$/.test(entry.value),
+    ).length;
+    const boolLikeFieldCount = activeModuleEntries.filter((entry) =>
+      /(√|×|是|否)$/.test(entry.value),
+    ).length;
     const latestTs =
       toNumber(readPath(activeModule.moduleData, ['lastSeenAt'])) ??
       toNumber(readPath(activeModule.moduleData, ['lastOfferAt'])) ??
       toNumber(readPath(activeModule.moduleData, ['startedAt']));
 
     const aggregateEntries: SemanticEntry[] = [
-      { keyPath: 'stats.total', label: '总字段数', value: String(activeModuleEntries.length) },
-      { keyPath: 'stats.numeric', label: '数值字段数', value: String(numericFieldCount) },
-      { keyPath: 'stats.boolLike', label: '状态字段数', value: String(boolLikeFieldCount) },
+      {
+        keyPath: 'stats.total',
+        label: '总字段数',
+        value: String(activeModuleEntries.length),
+      },
+      {
+        keyPath: 'stats.numeric',
+        label: '数值字段数',
+        value: String(numericFieldCount),
+      },
+      {
+        keyPath: 'stats.boolLike',
+        label: '状态字段数',
+        value: String(boolLikeFieldCount),
+      },
       {
         keyPath: 'stats.latest',
         label: '最近时间',
@@ -593,8 +692,16 @@ const Dashboard: React.FC = () => {
   const fpsTrendData = useMemo(() => {
     return trendHistory.flatMap((point) => {
       return [
-        { time: formatTimeLabel(point.ts), value: point.ingestFps, series: 'ingest FPS' },
-        { time: formatTimeLabel(point.ts), value: point.videoFps, series: 'video FPS' },
+        {
+          time: formatTimeLabel(point.ts),
+          value: point.ingestFps,
+          series: 'ingest FPS',
+        },
+        {
+          time: formatTimeLabel(point.ts),
+          value: point.videoFps,
+          series: 'video FPS',
+        },
       ];
     });
   }, [trendHistory]);
@@ -603,16 +710,32 @@ const Dashboard: React.FC = () => {
     return trendHistory.flatMap((point) => {
       const rows: Array<{ time: string; value: number; series: string }> = [];
       if (point.latencyAverage != null) {
-        rows.push({ time: formatTimeLabel(point.ts), value: point.latencyAverage, series: 'average latency' });
+        rows.push({
+          time: formatTimeLabel(point.ts),
+          value: point.latencyAverage,
+          series: 'average latency',
+        });
       }
       if (point.latencyLatest != null) {
-        rows.push({ time: formatTimeLabel(point.ts), value: point.latencyLatest, series: 'latest latency' });
+        rows.push({
+          time: formatTimeLabel(point.ts),
+          value: point.latencyLatest,
+          series: 'latest latency',
+        });
       }
       if (point.latencyP95 != null) {
-        rows.push({ time: formatTimeLabel(point.ts), value: point.latencyP95, series: 'p95 latency' });
+        rows.push({
+          time: formatTimeLabel(point.ts),
+          value: point.latencyP95,
+          series: 'p95 latency',
+        });
       }
       if (point.latencyP99 != null) {
-        rows.push({ time: formatTimeLabel(point.ts), value: point.latencyP99, series: 'p99 latency' });
+        rows.push({
+          time: formatTimeLabel(point.ts),
+          value: point.latencyP99,
+          series: 'p99 latency',
+        });
       }
       return rows;
     });
@@ -621,9 +744,21 @@ const Dashboard: React.FC = () => {
   const memoryTrendData = useMemo(() => {
     return trendHistory.flatMap((point) => {
       return [
-        { time: formatTimeLabel(point.ts), value: point.rssMb, series: 'RSS MB' },
-        { time: formatTimeLabel(point.ts), value: point.heapUsedMb, series: 'heapUsed MB' },
-        { time: formatTimeLabel(point.ts), value: point.heapTotalMb, series: 'heapTotal MB' },
+        {
+          time: formatTimeLabel(point.ts),
+          value: point.rssMb,
+          series: 'RSS MB',
+        },
+        {
+          time: formatTimeLabel(point.ts),
+          value: point.heapUsedMb,
+          series: 'heapUsed MB',
+        },
+        {
+          time: formatTimeLabel(point.ts),
+          value: point.heapTotalMb,
+          series: 'heapTotal MB',
+        },
       ];
     });
   }, [trendHistory]);
@@ -632,10 +767,18 @@ const Dashboard: React.FC = () => {
     return trendHistory.flatMap((point) => {
       const rows: Array<{ time: string; value: number; series: string }> = [];
       if (point.cpuPercent != null) {
-        rows.push({ time: formatTimeLabel(point.ts), value: point.cpuPercent, series: 'CPU %' });
+        rows.push({
+          time: formatTimeLabel(point.ts),
+          value: point.cpuPercent,
+          series: 'CPU %',
+        });
       }
       if (point.eventLoopLagMean != null) {
-        rows.push({ time: formatTimeLabel(point.ts), value: point.eventLoopLagMean, series: 'event loop lag ms' });
+        rows.push({
+          time: formatTimeLabel(point.ts),
+          value: point.eventLoopLagMean,
+          series: 'event loop lag ms',
+        });
       }
       return rows;
     });
@@ -645,20 +788,33 @@ const Dashboard: React.FC = () => {
     return trendHistory.flatMap((point) => {
       const rows: Array<{ time: string; value: number; series: string }> = [];
       if (point.esp32WindowDropCount != null) {
-        rows.push({ time: formatTimeLabel(point.ts), value: point.esp32WindowDropCount, series: 'drop count' });
+        rows.push({
+          time: formatTimeLabel(point.ts),
+          value: point.esp32WindowDropCount,
+          series: 'drop count',
+        });
       }
       if (point.esp32WindowRecvCount != null) {
-        rows.push({ time: formatTimeLabel(point.ts), value: point.esp32WindowRecvCount, series: 'recv count' });
+        rows.push({
+          time: formatTimeLabel(point.ts),
+          value: point.esp32WindowRecvCount,
+          series: 'recv count',
+        });
       }
       if (point.esp32WindowDropPct != null) {
-        rows.push({ time: formatTimeLabel(point.ts), value: point.esp32WindowDropPct, series: 'drop %' });
+        rows.push({
+          time: formatTimeLabel(point.ts),
+          value: point.esp32WindowDropPct,
+          series: 'drop %',
+        });
       }
       return rows;
     });
   }, [trendHistory]);
 
   const moduleHealthRows = useMemo<ModuleHealthRow[]>(() => {
-    const latestPoint = trendHistory.length > 0 ? trendHistory[trendHistory.length - 1] : null;
+    const latestPoint =
+      trendHistory.length > 0 ? trendHistory[trendHistory.length - 1] : null;
     if (!latestPoint) {
       return MODULE_ORDER.map((moduleName) => ({
         key: moduleName,
@@ -671,7 +827,9 @@ const Dashboard: React.FC = () => {
     }
 
     const now = latestPoint.ts;
-    const windowPoints = trendHistory.filter((point) => point.ts >= now - TREND_WINDOW_MS);
+    const windowPoints = trendHistory.filter(
+      (point) => point.ts >= now - TREND_WINDOW_MS,
+    );
 
     return MODULE_ORDER.map((moduleName) => {
       const points = windowPoints
@@ -724,7 +882,12 @@ const Dashboard: React.FC = () => {
         dataIndex: 'status',
         key: 'status',
         render: (value: ModuleHealthRow['status']) => {
-          const color = value === '在线' ? 'success' : value === '离线' ? 'error' : 'default';
+          const color =
+            value === '在线'
+              ? 'success'
+              : value === '离线'
+                ? 'error'
+                : 'default';
           return <Tag color={color}>{value}</Tag>;
         },
       },
@@ -740,12 +903,21 @@ const Dashboard: React.FC = () => {
     if (trendHistory.length === 0) return [];
 
     const latest = trendHistory[trendHistory.length - 1];
-    const windowPoints = trendHistory.filter((point) => point.ts >= latest.ts - FIDELITY_WINDOW_MS);
-    const baseline = windowPoints.length > 0 ? windowPoints[0] : trendHistory[0];
+    const windowPoints = trendHistory.filter(
+      (point) => point.ts >= latest.ts - FIDELITY_WINDOW_MS,
+    );
+    const baseline =
+      windowPoints.length > 0 ? windowPoints[0] : trendHistory[0];
 
     const stageDeltas = [
-      { stageLabel: '源帧计数', value: safeDelta(latest.sourceFrames, baseline.sourceFrames) },
-      { stageLabel: '输入总线帧', value: safeDelta(latest.ingestFrames, baseline.ingestFrames) },
+      {
+        stageLabel: '源帧计数',
+        value: safeDelta(latest.sourceFrames, baseline.sourceFrames),
+      },
+      {
+        stageLabel: '输入总线帧',
+        value: safeDelta(latest.ingestFrames, baseline.ingestFrames),
+      },
       {
         stageLabel: 'Python 输入帧',
         value: safeDelta(latest.pythonInFrames, baseline.pythonInFrames),
@@ -758,7 +930,10 @@ const Dashboard: React.FC = () => {
         stageLabel: 'Python 输出帧',
         value: safeDelta(latest.pythonOutFrames, baseline.pythonOutFrames),
       },
-      { stageLabel: '视频输出帧', value: safeDelta(latest.videoFrames, baseline.videoFrames) },
+      {
+        stageLabel: '视频输出帧',
+        value: safeDelta(latest.videoFrames, baseline.videoFrames),
+      },
     ];
 
     // Make fidelity follow upstream throughput and keep a descending trend across stages.
@@ -798,7 +973,9 @@ const Dashboard: React.FC = () => {
       2,
     );
 
-    const blob = new Blob([content], { type: 'application/json;charset=utf-8' });
+    const blob = new Blob([content], {
+      type: 'application/json;charset=utf-8',
+    });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
@@ -890,7 +1067,11 @@ const Dashboard: React.FC = () => {
         >
           {autoRefresh ? '暂停订阅' : '恢复订阅'}
         </Button>,
-        <Button key="refresh" icon={<ReloadOutlined />} onClick={() => requestSnapshot(true)}>
+        <Button
+          key="refresh"
+          icon={<ReloadOutlined />}
+          onClick={() => requestSnapshot(true)}
+        >
           刷新快照
         </Button>,
         <Button key="export" onClick={handleExportSnapshot}>
@@ -901,7 +1082,12 @@ const Dashboard: React.FC = () => {
       <ProCard direction="column" gutter={[16, 16]} ghost>
         <ProCard title="核心指标" bordered>
           <div className={styles.metricTopLayout}>
-            <ProCard title="链路性能" size="small" bordered className={styles.fillCard}>
+            <ProCard
+              title="链路性能"
+              size="small"
+              bordered
+              className={styles.fillCard}
+            >
               <div className={styles.pipelineMetricGrid}>
                 {pipelineMetrics.map((metric) => (
                   <StatisticCard
@@ -919,7 +1105,12 @@ const Dashboard: React.FC = () => {
               </div>
             </ProCard>
 
-            <ProCard title="连接状态" size="small" bordered className={styles.fillCard}>
+            <ProCard
+              title="连接状态"
+              size="small"
+              bordered
+              className={styles.fillCard}
+            >
               <div className={styles.bridgeMetricGrid}>
                 {bridgeMetrics.map((metric) => (
                   <StatisticCard
@@ -941,7 +1132,12 @@ const Dashboard: React.FC = () => {
 
         <ProCard title="实时图表" bordered>
           <div className={styles.chartGrid}>
-            <ProCard title="链路吞吐趋势（最近1分钟）" size="small" bordered className={styles.fillCard}>
+            <ProCard
+              title="链路吞吐趋势（最近1分钟）"
+              size="small"
+              bordered
+              className={styles.fillCard}
+            >
               {fpsTrendData.length > 0 ? (
                 <Line
                   data={fpsTrendData}
@@ -955,11 +1151,19 @@ const Dashboard: React.FC = () => {
                   animation={false}
                 />
               ) : (
-                <Empty description="等待趋势数据" image={Empty.PRESENTED_IMAGE_SIMPLE} />
+                <Empty
+                  description="等待趋势数据"
+                  image={Empty.PRESENTED_IMAGE_SIMPLE}
+                />
               )}
             </ProCard>
 
-            <ProCard title="延迟趋势（最近1分钟）" size="small" bordered className={styles.fillCard}>
+            <ProCard
+              title="延迟趋势（最近1分钟）"
+              size="small"
+              bordered
+              className={styles.fillCard}
+            >
               {latencyTrendData.length > 0 ? (
                 <Line
                   data={latencyTrendData}
@@ -973,11 +1177,19 @@ const Dashboard: React.FC = () => {
                   animation={false}
                 />
               ) : (
-                <Empty description="等待延迟数据" image={Empty.PRESENTED_IMAGE_SIMPLE} />
+                <Empty
+                  description="等待延迟数据"
+                  image={Empty.PRESENTED_IMAGE_SIMPLE}
+                />
               )}
             </ProCard>
 
-            <ProCard title="资源趋势（最近1分钟）" size="small" bordered className={styles.fillCard}>
+            <ProCard
+              title="资源趋势（最近1分钟）"
+              size="small"
+              bordered
+              className={styles.fillCard}
+            >
               {memoryTrendData.length > 0 ? (
                 <Line
                   data={memoryTrendData}
@@ -989,11 +1201,19 @@ const Dashboard: React.FC = () => {
                   animation={false}
                 />
               ) : (
-                <Empty description="等待资源数据" image={Empty.PRESENTED_IMAGE_SIMPLE} />
+                <Empty
+                  description="等待资源数据"
+                  image={Empty.PRESENTED_IMAGE_SIMPLE}
+                />
               )}
             </ProCard>
 
-            <ProCard title="运行时趋势（最近1分钟）" size="small" bordered className={styles.fillCard}>
+            <ProCard
+              title="运行时趋势（最近1分钟）"
+              size="small"
+              bordered
+              className={styles.fillCard}
+            >
               <div className={styles.subChartSpacer} />
 
               {runtimeTrendData.length > 0 ? (
@@ -1007,15 +1227,21 @@ const Dashboard: React.FC = () => {
                   animation={false}
                 />
               ) : (
-                <Empty description="等待 CPU / Event Loop 数据" image={Empty.PRESENTED_IMAGE_SIMPLE} />
+                <Empty
+                  description="等待 CPU / Event Loop 数据"
+                  image={Empty.PRESENTED_IMAGE_SIMPLE}
+                />
               )}
-
-              </ProCard>
-            
+            </ProCard>
           </div>
 
           <div className={styles.diagnosisChartGrid}>
-            <ProCard title="模块健康时间线（最近1分钟）" size="small" bordered className={styles.fillCard}>
+            <ProCard
+              title="模块健康时间线（最近1分钟）"
+              size="small"
+              bordered
+              className={styles.fillCard}
+            >
               <Table<ModuleHealthRow>
                 size="small"
                 rowKey="key"
@@ -1026,7 +1252,12 @@ const Dashboard: React.FC = () => {
               />
             </ProCard>
 
-            <ProCard title="丢包诊断（最近1分钟）" size="small" bordered className={styles.fillCard}>
+            <ProCard
+              title="丢包诊断（最近1分钟）"
+              size="small"
+              bordered
+              className={styles.fillCard}
+            >
               {packetLossTrendData.length > 0 ? (
                 <Line
                   data={packetLossTrendData}
@@ -1038,11 +1269,19 @@ const Dashboard: React.FC = () => {
                   animation={false}
                 />
               ) : (
-                <Empty description="等待 ESP32 UDP 丢包数据" image={Empty.PRESENTED_IMAGE_SIMPLE} />
+                <Empty
+                  description="等待 ESP32 UDP 丢包数据"
+                  image={Empty.PRESENTED_IMAGE_SIMPLE}
+                />
               )}
-             </ProCard>
+            </ProCard>
 
-            <ProCard title="链路保真（最近1分钟差分）" size="small" bordered className={styles.fillCard}>
+            <ProCard
+              title="链路保真（最近1分钟差分）"
+              size="small"
+              bordered
+              className={styles.fillCard}
+            >
               {fidelityData.length > 0 ? (
                 <Column
                   data={fidelityData}
@@ -1061,14 +1300,21 @@ const Dashboard: React.FC = () => {
                   }}
                 />
               ) : (
-                <Empty description="等待链路计数数据" image={Empty.PRESENTED_IMAGE_SIMPLE} />
+                <Empty
+                  description="等待链路计数数据"
+                  image={Empty.PRESENTED_IMAGE_SIMPLE}
+                />
               )}
             </ProCard>
           </div>
-        </ProCard>  
+        </ProCard>
 
         <ProCard
-          title={<span><SyncOutlined spin /> 运行态概览</span>}
+          title={
+            <span>
+              <SyncOutlined spin /> 运行态概览
+            </span>
+          }
           headerBordered
           direction="column"
         >
@@ -1113,7 +1359,10 @@ const Dashboard: React.FC = () => {
               </div>
             </div>
           ) : (
-            <Empty description="等待实时状态数据" image={Empty.PRESENTED_IMAGE_SIMPLE} />
+            <Empty
+              description="等待实时状态数据"
+              image={Empty.PRESENTED_IMAGE_SIMPLE}
+            />
           )}
         </ProCard>
 
@@ -1134,20 +1383,27 @@ const Dashboard: React.FC = () => {
                     className={styles.fillCard}
                     title={
                       <div className={styles.wrapInline}>
-                        <span className={styles.wrapText}>{moduleTitle(moduleName)}</span>
+                        <span className={styles.wrapText}>
+                          {moduleTitle(moduleName)}
+                        </span>
                         <Tag color={statusTag.color}>{statusTag.text}</Tag>
                       </div>
                     }
                     extra={
                       <Button
                         type="link"
-                        onClick={() => setActiveModule({ moduleName, moduleData })}
+                        onClick={() =>
+                          setActiveModule({ moduleName, moduleData })
+                        }
                       >
                         详情
                       </Button>
                     }
                   >
-                    <Typography.Text type="secondary" className={styles.summaryText}>
+                    <Typography.Text
+                      type="secondary"
+                      className={styles.summaryText}
+                    >
                       {moduleSummary(moduleName, moduleData)}
                     </Typography.Text>
                   </ProCard>
@@ -1155,12 +1411,19 @@ const Dashboard: React.FC = () => {
               })}
             </div>
           ) : (
-            <Empty description="等待模块状态" image={Empty.PRESENTED_IMAGE_SIMPLE} />
+            <Empty
+              description="等待模块状态"
+              image={Empty.PRESENTED_IMAGE_SIMPLE}
+            />
           )}
         </ProCard>
 
         <ProCard
-          title={<span><SettingOutlined /> 配置快照</span>}
+          title={
+            <span>
+              <SettingOutlined /> 配置快照
+            </span>
+          }
           headerBordered
           extra={<Tag color="geekblue">{configSections.length} modules</Tag>}
         >
@@ -1172,7 +1435,9 @@ const Dashboard: React.FC = () => {
                   size="small"
                   bordered
                   className={styles.fillCard}
-                  title={<span className={styles.wrapText}>{section.title}</span>}
+                  title={
+                    <span className={styles.wrapText}>{section.title}</span>
+                  }
                 >
                   <ProDescriptions
                     size="small"
@@ -1184,7 +1449,10 @@ const Dashboard: React.FC = () => {
               ))}
             </div>
           ) : (
-            <Empty description="等待配置快照" image={Empty.PRESENTED_IMAGE_SIMPLE} />
+            <Empty
+              description="等待配置快照"
+              image={Empty.PRESENTED_IMAGE_SIMPLE}
+            />
           )}
         </ProCard>
       </ProCard>
@@ -1194,7 +1462,11 @@ const Dashboard: React.FC = () => {
         open={Boolean(activeModule)}
         onClose={() => setActiveModule(null)}
         destroyOnClose
-        title={activeModule ? `${moduleTitle(activeModule.moduleName)} 详情` : '模块详情'}
+        title={
+          activeModule
+            ? `${moduleTitle(activeModule.moduleName)} 详情`
+            : '模块详情'
+        }
       >
         {activeModule ? (
           <ProCard direction="column" ghost gutter={[12, 12]}>
@@ -1237,19 +1509,29 @@ const Dashboard: React.FC = () => {
                       dataSource={activeStatsSchema.dataSource}
                     />
                   ) : (
-                    <Empty description="暂无统计信息" image={Empty.PRESENTED_IMAGE_SIMPLE} />
+                    <Empty
+                      description="暂无统计信息"
+                      image={Empty.PRESENTED_IMAGE_SIMPLE}
+                    />
                   ),
                 },
                 {
                   key: 'raw',
                   label: '原始字段',
-                  children: <pre className={styles.drawerRaw}>{JSON.stringify(activeModule.moduleData, null, 2)}</pre>,
+                  children: (
+                    <pre className={styles.drawerRaw}>
+                      {JSON.stringify(activeModule.moduleData, null, 2)}
+                    </pre>
+                  ),
                 },
               ]}
             />
           </ProCard>
         ) : (
-          <Empty description="请选择模块查看详情" image={Empty.PRESENTED_IMAGE_SIMPLE} />
+          <Empty
+            description="请选择模块查看详情"
+            image={Empty.PRESENTED_IMAGE_SIMPLE}
+          />
         )}
       </Drawer>
     </PageContainer>

@@ -10,7 +10,7 @@ function createImageLoopSource(defaultOpts = {}) {
       defaultOpts.imageDir ??
       path.join(
         "D:\\Code\\BrightSmile\\AI\\datas\\Benchmarking Dataset\\train",
-        "images"
+        "images",
       ),
     fps: defaultOpts.fps ?? 30,
     width: defaultOpts.width ?? 640,
@@ -31,7 +31,7 @@ function createImageLoopSource(defaultOpts = {}) {
     .filter((f) => SUPPORTED_EXT.has(path.extname(f).toLowerCase()));
 
   console.log(
-    `[imageLoopSource] Loaded ${files.length} images from ${opts.imageDir}`
+    `[imageLoopSource] Loaded ${files.length} images from ${opts.imageDir}`,
   );
 
   async function resizeImage(buffer) {
@@ -69,7 +69,7 @@ function createImageLoopSource(defaultOpts = {}) {
     if (timer) return;
     if (!frameChannel)
       throw new Error(
-        "[imageLoopSource] start(frameChannel) requires a frameChannel"
+        "[imageLoopSource] start(frameChannel) requires a frameChannel",
       );
 
     timer = setInterval(() => {
@@ -81,7 +81,7 @@ function createImageLoopSource(defaultOpts = {}) {
     running = true;
 
     console.log(
-      `[imageLoopSource] Started @ ${opts.fps} FPS (${opts.width}x${opts.height})`
+      `[imageLoopSource] Started @ ${opts.fps} FPS (${opts.width}x${opts.height})`,
     );
   }
 

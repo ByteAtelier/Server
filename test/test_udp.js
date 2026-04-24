@@ -11,7 +11,7 @@ sock.on("message", (msg, rinfo) => {
   console.log(
     `RECV ${rinfo.address}:${rinfo.port} ->`,
     msg.toString("hex"),
-    msg.toString()
+    msg.toString(),
   );
 
   // 原样回显

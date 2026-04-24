@@ -16,10 +16,20 @@ function main() {
   let dashboardModule = null;
 
   // 服务器部分（先创建，拿到 io）
-  const { httpServer, io, getStatus: getServerStatus } = createServer({ corsOrigin: "*" });
+  const {
+    httpServer,
+    io,
+    getStatus: getServerStatus,
+  } = createServer({ corsOrigin: "*" });
 
   // 传输层部分（挂到 io 上）
-  const webrtcTransport = setupWebRTCTransport(io, videoBus, width, height, APP_CONFIG.webrtc);
+  const webrtcTransport = setupWebRTCTransport(
+    io,
+    videoBus,
+    width,
+    height,
+    APP_CONFIG.webrtc,
+  );
 
   // Dashboard：由前端主动请求订阅后，按间隔推送服务端状态
   dashboardModule = setupDashboard(io, {
@@ -166,7 +176,8 @@ function main() {
   });
 
   // 创建 media 处理器并启动
-  mediaProcessor = new MediaProcessor({ // 新增：实例化并启动 MediaProcessor
+  mediaProcessor = new MediaProcessor({
+    // 新增：实例化并启动 MediaProcessor
     fps: APP_CONFIG.media.fps,
     width,
     height,
@@ -190,7 +201,9 @@ function main() {
       height,
     });
   } else {
-    throw new Error(`[main] unsupported APP_CONFIG.source.type=${APP_CONFIG.source.type}`);
+    throw new Error(
+      `[main] unsupported APP_CONFIG.source.type=${APP_CONFIG.source.type}`,
+    );
   }
   source.start(ingestBus);
 
@@ -204,9 +217,15 @@ function main() {
 
   // 优雅退出，避免残留定时器/句柄
   process.on("SIGINT", () => {
-    try { source.stop?.(); } catch {}
-    try { httpServer.close(); } catch {}
-    try { mediaProcessor.stop(); } catch {}
+    try {
+      source.stop?.();
+    } catch {}
+    try {
+      httpServer.close();
+    } catch {}
+    try {
+      mediaProcessor.stop();
+    } catch {}
     process.exit(0);
   });
 }

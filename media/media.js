@@ -75,7 +75,7 @@ class MediaProcessor {
     // 将 Python 处理后的 BGR 帧送入编码器（BGR -> I420）
     this.encoder.pushFrame(frameBuf);
   }
-  
+
   // 处理编码后的 I420 数据
   handleEncodedFrame(i420Frame) {
     // 将编码后的 I420 数据推送到 videoBus

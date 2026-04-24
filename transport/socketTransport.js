@@ -4,7 +4,7 @@ module.exports = function setupSocket(io, frameChannel) {
   let connectedCount = 0;
   let lastFrameAt = null;
 
-  frameChannel.on('frame', (frame) => {
+  frameChannel.on("frame", (frame) => {
     // 只保留最新一帧，旧的直接被覆盖
     latestFrame = frame;
     lastFrameAt = Date.now();

@@ -1,6 +1,7 @@
 import os
 import sys
 
+
 def log(msg: str) -> None:
     try:
         fr = sys._getframe(1)  # caller frame

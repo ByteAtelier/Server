@@ -1,6 +1,12 @@
 const wrtc = require("wrtc");
 
-module.exports = function setupWebRTCTransport(io, frameChannel, videoWidth, videoHeight, options = {}) {
+module.exports = function setupWebRTCTransport(
+  io,
+  frameChannel,
+  videoWidth,
+  videoHeight,
+  options = {},
+) {
   const fps = options.fps ?? 30;
   const singleClient = options.singleClient ?? true;
 
@@ -107,7 +113,9 @@ module.exports = function setupWebRTCTransport(io, frameChannel, videoWidth, vid
       newPc.onconnectionstatechange = () => {
         console.log("[pc] state:", newPc.connectionState);
         lastConnectionState = newPc.connectionState;
-        hasActivePeer = newPc.connectionState === "connecting" || newPc.connectionState === "connected";
+        hasActivePeer =
+          newPc.connectionState === "connecting" ||
+          newPc.connectionState === "connected";
       };
 
       videoSource = new wrtc.nonstandard.RTCVideoSource();

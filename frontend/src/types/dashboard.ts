@@ -4,7 +4,10 @@ export interface DashboardConfigObject {
   [key: string]: DashboardConfigValue;
 }
 
-export type DashboardConfigValue = DashboardPrimitive | DashboardConfigObject | DashboardConfigValue[];
+export type DashboardConfigValue =
+  | DashboardPrimitive
+  | DashboardConfigObject
+  | DashboardConfigValue[];
 
 export interface DashboardModuleStatus {
   alive: boolean;

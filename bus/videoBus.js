@@ -4,7 +4,7 @@ class VideoBus extends EventEmitter {
   constructor() {
     super();
     this._stableBuf = null; // VideoBus 自己持有的稳定内存
-    this._latest = null;    // { data: Buffer, ...meta }（对象也复用）
+    this._latest = null; // { data: Buffer, ...meta }（对象也复用）
     this._totalFrames = 0;
     this._lastSeenAt = null;
   }
@@ -13,7 +13,9 @@ class VideoBus extends EventEmitter {
   push(frame) {
     if (!frame || !frame.data) return;
 
-    const src = Buffer.isBuffer(frame.data) ? frame.data : Buffer.from(frame.data);
+    const src = Buffer.isBuffer(frame.data)
+      ? frame.data
+      : Buffer.from(frame.data);
 
     // 只在首次/尺寸变化时分配（你分辨率写死，正常只会分配一次）
     if (!this._stableBuf || this._stableBuf.length !== src.length) {
