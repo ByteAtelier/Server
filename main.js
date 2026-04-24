@@ -9,6 +9,13 @@ const APP_CONFIG = require("./config/app.config");
 const setupDashboard = require("./dashboard/dashboard");
 
 function main() {
+  // 调用参数覆盖app.config.js的配置项，优先级高于默认配置
+  const sourceArg = process.argv[2];
+  if (sourceArg === "image") {
+    APP_CONFIG.source.type = "imageLoop";
+  } else if (sourceArg === "esp32") {
+    APP_CONFIG.source.type = "esp32Udp";
+  }
   const width = APP_CONFIG.media.width;
   const height = APP_CONFIG.media.height;
   let mediaProcessor = null;

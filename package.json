@@ -1,6 +1,9 @@
 {
   "scripts": {
-    "start:server": "node main.js",
+    "start:server_image": "start npm run start:frp_tcp & node main.js image",
+    "start:server_esp32": "start npm run start:frp_tcp & start npm run start:frp_udp & node main.js esp32",
+    "start:frp_tcp": ".\\frp\\frpc.exe -c .\\frp\\frpc_tcp.ini",
+    "start:frp_udp": ".\\frp\\frpc.exe -c .\\frp\\frpc_udp.ini",
     "fmt:server": "prettier --write **/*.js",
     "fmt:python": "black .",
     "dev:frontend": "cd frontend && max dev",
