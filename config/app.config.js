@@ -61,7 +61,7 @@ const APP_CONFIG = {
     },
     esp32Udp: {
       host: "0.0.0.0",
-      port: 5000,
+      port: 50000,
       codec: "jpeg",
       headerBytes: 16,
       udpMaxPayload: 1024,
