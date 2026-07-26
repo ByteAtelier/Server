@@ -1,6 +1,6 @@
 {
   "scripts": {
-    "start": "npm run start:server",
+    "start": "npm run start:server_esp32",
     "start:server_image": "start npm run start:frp_tcp & node main.js image",
     "start:server_esp32": "start npm run start:frp_tcp & start npm run start:frp_udp & node main.js esp32",
     "start:frp_tcp": ".\\frp\\frpc.exe -c .\\frp\\frpc_tcp.ini",
