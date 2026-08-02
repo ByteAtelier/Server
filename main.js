@@ -125,6 +125,7 @@ function main() {
             codec: s.codec,
             width: s.width,
             height: s.height,
+            session: s.session,
             frameId: s.frameId,
             lastFrameId: s.lastFrameId,
             windowRecvCount: s.windowRecvCount,

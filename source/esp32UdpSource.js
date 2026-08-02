@@ -16,6 +16,7 @@ function createEsp32UdpSource(defaultOpts = {}) {
 
   let socket = null;
   let running = false;
+  let currentSession = null;
 
   // 单行状态栏统计窗口（仅有活动时输出）
   let statWindowStart = 0;
@@ -30,6 +31,23 @@ function createEsp32UdpSource(defaultOpts = {}) {
   let totalRecvCount = 0;
   let totalDropCount = 0;
   let totalDropReasons = Object.create(null);
+
+  function resetSessionState() {
+    cur = null;
+    prev = null;
+
+    statWindowStart = 0;
+    recvStatCount = 0;
+    lastFrameId = -1;
+    dropStatCount = 0;
+    dropReasons = Object.create(null);
+    windowFps = 0;
+    windowDropPct = 0;
+    windowTopDropReasons = [];
+    totalRecvCount = 0;
+    totalDropCount = 0;
+    totalDropReasons = Object.create(null);
+  }
 
   function writeStatusLine(line) {
     if (process.stdout.isTTY) {
@@ -64,6 +82,7 @@ function createEsp32UdpSource(defaultOpts = {}) {
     const totalEvents = recvStatCount + dropStatCount;
     const dropPct = totalEvents > 0 ? (dropStatCount * 100) / totalEvents : 0;
     const reasonSummary = dropStatCount > 0 ? topDropReasons(2) : "-";
+    const sessionText = currentSession !== null ? String(currentSession) : "-";
     const idText = lastFrameId >= 0 ? String(lastFrameId) : "-";
     const recvText = String(recvStatCount);
     const fpsText = fps.toFixed(1);
@@ -80,7 +99,7 @@ function createEsp32UdpSource(defaultOpts = {}) {
         : [];
 
     writeStatusLine(
-      `[esp32UdpSource] id=${idText} recv=${recvText} fps=${fpsText} drop=${dropStatCount} drop%=${dropPctText} top=${reasonSummary}`,
+      `[esp32UdpSource] session=${sessionText} id=${idText} recv=${recvText} fps=${fpsText} drop=${dropStatCount} drop%=${dropPctText} top=${reasonSummary}`,
     );
 
     statWindowStart = now;
@@ -157,7 +176,14 @@ function createEsp32UdpSource(defaultOpts = {}) {
     const total = msg.readUInt16LE(8);
     const index = msg.readUInt16LE(10);
     const dataLen = msg.readUInt16LE(12);
-    const _ = msg.readUInt16LE(14); // 内存对齐
+    const session = msg.readUInt16LE(14);
+
+    // session 代表设备的一次连续发送周期。设备重启或重新开始发送时，
+    // frame id 可能从较小的值重新开始，因此必须丢弃上一 session 的全部状态。
+    if (currentSession !== session) {
+      resetSessionState();
+      currentSession = session;
+    }
 
     // ========== 基本校验 ==========
     if (total === 0) {
@@ -264,20 +290,9 @@ function createEsp32UdpSource(defaultOpts = {}) {
     if (!running) return;
     running = false;
 
-    cur = null;
-    prev = null;
     flushStatus(Date.now(), true);
-    statWindowStart = 0;
-    recvStatCount = 0;
-    lastFrameId = -1;
-    dropStatCount = 0;
-    dropReasons = Object.create(null);
-    windowFps = 0;
-    windowDropPct = 0;
-    windowTopDropReasons = [];
-    totalRecvCount = 0;
-    totalDropCount = 0;
-    totalDropReasons = Object.create(null);
+    resetSessionState();
+    currentSession = null;
 
     if (process.stdout.isTTY && lastInlineLen > 0) {
       process.stdout.write("\r\n");
@@ -304,6 +319,7 @@ function createEsp32UdpSource(defaultOpts = {}) {
       codec: opts.codec,
       width: opts.width,
       height: opts.height,
+      session: currentSession,
       frameId: lastFrameId >= 0 ? lastFrameId : null,
       lastFrameId,
       windowRecvCount: recvStatCount,

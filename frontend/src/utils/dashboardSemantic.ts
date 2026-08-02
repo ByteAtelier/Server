@@ -71,6 +71,7 @@ const NAME_MAP: Record<string, string> = {
   media: '媒体参数',
   width: '宽度',
   height: '高度',
+  session: '会话 ID',
   imageLoop: '图片轮播源',
   esp32Udp: 'ESP32 UDP 源',
   jpegQuality: 'JPEG 质量',
