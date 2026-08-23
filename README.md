@@ -277,7 +277,7 @@ npm run lint:frontend
 - `test/turn.html`：TURN/ICE 采集测试
 - `test/test_udp.js`：UDP 回显测试脚本
 
-> 提示：这些页面内的地址通常需要按环境手动替换（不要漏）：
+> 提示：这些页面内的地址通常需要按环境手动替换：
 > - `test/webrtc.html` / `test/dashboard.html`：`http://<your-server-host>:<server-port>`
 > - `test/socket.html`：`http://<your-socket-host>:<server-port>`
 > - `test/turn.html`：`turn:<your-turn-host>:3478?transport=tcp`
