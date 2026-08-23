@@ -31,9 +31,7 @@ function main() {
   } = createServer({ corsOrigin: "*" });
 
   // Frp进行穿透
-  const frpProcessor = new FrpProcessor(
-    APP_CONFIG.source.type,
-  );
+  const frpProcessor = new FrpProcessor(APP_CONFIG.source.type);
   frpProcessor.start();
 
   // 传输层部分（挂到 io 上）
