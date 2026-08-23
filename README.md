@@ -261,8 +261,6 @@ npm run lint:frontend
   - `turn.urls/username/credential`
 - `frp`
   - `frpc_<sourceType>.ini`（需自行准备并放在 `/frp` 目录）
-
-> 安全建议：`turn` 与 `frp` 相关主机、账号、口令请统一使用占位符或本地私有配置，不要在 README/示例中写入真实 IP、域名或凭据。
 - `dashboard`
   - `defaultIntervalMs`
   - `moduleAliveMs`
