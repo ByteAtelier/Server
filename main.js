@@ -6,6 +6,7 @@ const MediaProcessor = require("./media/media");
 const ingestBus = require("./bus/ingestBus");
 const videoBus = require("./bus/videoBus");
 const APP_CONFIG = require("./config/app.config");
+const FrpProcessor = require("./frp/frp");
 const setupDashboard = require("./dashboard/dashboard");
 
 function main() {
@@ -28,6 +29,12 @@ function main() {
     io,
     getStatus: getServerStatus,
   } = createServer({ corsOrigin: "*" });
+
+  // Frp进行穿透
+  const frpProcessor = new FrpProcessor(
+    APP_CONFIG.source.type,
+  );
+  frpProcessor.start();
 
   // 传输层部分（挂到 io 上）
   const webrtcTransport = setupWebRTCTransport(
@@ -227,6 +234,9 @@ function main() {
   process.on("SIGINT", () => {
     try {
       source.stop?.();
+    } catch {}
+    try {
+      frpProcessor.stop();
     } catch {}
     try {
       httpServer.close();

@@ -139,4 +139,6 @@ frontend/package-lock.json
 ########################
 # frp (frp/)
 ########################
-frp/
+frp/frpc.exe
+frp/frpc_imageLoop.ini
+frp/frpc_esp32Udp.ini
