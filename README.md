@@ -27,11 +27,16 @@
 
 - `main.js`
   - 创建 HTTP + Socket.IO 服务；
+  - 按 `APP_CONFIG.source.type` 自动启动 FRP 进程（`frpc_<sourceType>.ini`）；
   - 初始化 WebRTC 传输；
   - 初始化 Dashboard 状态聚合；
   - 初始化 `MediaProcessor`；
   - 根据配置选择数据源（`imageLoop` 或 `esp32Udp`）；
-  - 处理 `SIGINT` 优雅退出（停止 source / server / mediaProcessor）。
+  - 处理 `SIGINT` 优雅退出（停止 source / frp / server / mediaProcessor）。
+
+- `frp/frp.js`
+  - FRP 子进程管理器（启动/停止/状态）；
+  - 启动命令：`./frp/frpc.exe -c ./frp/frpc_<sourceType>.ini`。
 
 - `config/app.config.js`
   - 全局运行参数中心：`server`、`media`、`webrtc`、`dashboard`、`source`；
@@ -208,10 +213,12 @@ npm install
 ### 5.2 启动服务端
 
 ```bash
-npm run start:server
+npm run start    # 使用 esp32Udp 源（默认）
+npm run image    # 使用 imageLoop 源
 ```
 
 默认端口由 `config/app.config.js` 的 `server.port` 决定（默认 3000）。
+运行时会同时启动 FRP（按 `source.type` 选择对应 ini）。
 
 ### 5.3 Dashboard 前端开发
 
@@ -252,6 +259,10 @@ npm run lint:frontend
   - `fps`
   - `singleClient`
   - `turn.urls/username/credential`
+- `frp`
+  - `frpc_<sourceType>.ini`（需自行准备并放在 `/frp` 目录）
+
+> 安全建议：`turn` 与 `frp` 相关主机、账号、口令请统一使用占位符或本地私有配置，不要在 README/示例中写入真实 IP、域名或凭据。
 - `dashboard`
   - `defaultIntervalMs`
   - `moduleAliveMs`
@@ -268,11 +279,11 @@ npm run lint:frontend
 - `test/turn.html`：TURN/ICE 采集测试
 - `test/test_udp.js`：UDP 回显测试脚本
 
-> 提示：这些页面内的地址当前写死为远端地址，请按文件逐一替换（不要漏）：
-> - `test/webrtc.html` / `test/dashboard.html`：`http://<your-server-host>:8800`
-> - `test/socket.html`：`http://<your-socket-host>:8800`
+> 提示：这些页面内的地址通常需要按环境手动替换（不要漏）：
+> - `test/webrtc.html` / `test/dashboard.html`：`http://<your-server-host>:<server-port>`
+> - `test/socket.html`：`http://<your-socket-host>:<server-port>`
 > - `test/turn.html`：`turn:<your-turn-host>:3478?transport=tcp`
-> 本地联调时可改为你的本机服务地址（如 `http://localhost:3000` 或你的实际端口）。
+> 本地联调时可改为你的本机服务地址（如 `http://localhost:3000` 或你的实际端口），并避免提交真实公网信息。
 
 ---
 
@@ -304,6 +315,8 @@ npm run lint:frontend
 │  └─ socketTransport.js
 ├─ dashboard/
 │  └─ dashboard.js
+├─ frp/
+│  └─ frp.js
 ├─ frontend/
 │  ├─ config/config.ts
 │  └─ src/...
